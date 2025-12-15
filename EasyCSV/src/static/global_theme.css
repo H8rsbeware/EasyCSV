@@ -1,0 +1,21 @@
+:root[data-theme="light"]{
+    --deep-bg: #2c2c2c;
+    --deep-hvr: #444;
+    --deep-clr:  #ccc;
+}
+
+:root[data-theme="dark"]{
+    --deep-bg: #ccc;
+    --deep-hvr: #aaa;
+    --deep-clr: #444;
+}
+
+html {
+    padding: 0;
+    margin: 0;
+}
+
+body {
+    padding: 0;
+    margin: 0;
+}

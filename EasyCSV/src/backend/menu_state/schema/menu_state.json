@@ -1,0 +1,72 @@
+{
+    "file": {
+        "label": "File",
+        "items": [
+            {
+                "label": "New Project...",
+                "command": "file.newProject"
+            },
+            {
+                "label": "Open...",
+                "command": "file.open"
+            },
+            {
+                "type": "separator"
+            },
+            {
+                "label": "Exit",
+                "command": "app.exit"
+            }
+        ]
+    },
+    "edit": {
+        "label": "Edit",
+        "items": [
+            {
+                "label": "Undo",
+                "command": "edit.undo"
+            },
+            {
+                "label": "Redo",
+                "command": "edit.redo"
+            },
+            {
+                "type": "separator"
+            },
+            {
+                "label": "Cut",
+                "command": "edit.cut"
+            },
+            {
+                "label": "Copy",
+                "command": "edit.copy"
+            },
+            {
+                "label": "Paste",
+                "command": "edit.paste"
+            }
+        ]
+    },
+    "view": {
+        "label": "View",
+        "items": [
+            {
+                "label": "Toggle DevTools",
+                "command": "view.toggleDevTools"
+            },
+            {
+                "label": "Reload",
+                "command": "view.reload"
+            }
+        ]
+    },
+    "tools": {
+        "label": "Tools",
+        "items": [
+            {
+            "label": "Settings",
+            "command": "tools.settings"
+            }
+        ]
+    }
+}

@@ -1,0 +1,14 @@
+{
+  "tabs": [
+    {
+      "id": "welcome",
+      "kind": "welcome",
+      "title": "Welcome"
+    }
+  ],
+  "activeTabId": "welcome",
+  "sidebar": {
+    "mode": "explorer",
+    "projectRoot": null
+  }
+}

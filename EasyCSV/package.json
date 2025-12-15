@@ -1,0 +1,25 @@
+{
+  "name": "easycsv",
+  "version": "1.0.0",
+  "main": "electron src/main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "electron src/main.js",
+    "debug": "electron src/main.js --trace-warnings"
+  },
+  "build": {
+    "extraResources": [
+      {
+        "from": "src/settings.json",
+        "to": "settings.json"
+      }
+    ]
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "electron": "^39.2.6"
+  }
+}

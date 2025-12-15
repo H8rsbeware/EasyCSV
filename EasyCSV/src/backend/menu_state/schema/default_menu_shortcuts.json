@@ -1,0 +1,13 @@
+{
+    "file.newProject": "Ctrl+N",
+    "file.open": "Ctrl+O",
+    "app.exit": "Ctrl+Shift+F10",
+    "edit.undo": "Ctrl+Z",
+    "edit.redo": "Ctrl+Y",
+    "edit.cut": "Ctrl+X",
+    "edit.copy": "Ctrl+C",
+    "edit.paste": "Ctrl+V",
+    "view.toggleDevTools": "F12",
+    "view.reload": "Ctrl+R",
+    "tools.settings": "Ctrl+P"
+}
