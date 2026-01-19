@@ -1,0 +1,73 @@
+class TabBar {
+	constructor(rootEl) {
+		this.rootEl = rootEl;
+		this.tabs = [];
+		this.activeId = null;
+	}
+
+	// Called from your renderLayout(layout) when layout changes
+	syncFromLayout(tabs, activeTabId) {
+		this.tabs = tabs;
+		this.activeId = activeTabId;
+		this.render();
+	}
+
+	render() {
+		if (!this.rootEl) return;
+
+		this.rootEl.innerHTML = '';
+
+		Array.from(this.tabs).forEach((tab) => {
+			const el = document.createElement('div');
+			el.className = 'tab';
+
+			if (tab.id === this.activeId) {
+				el.classList.add('tab--active');
+			}
+			el.dataset.tabId = tab.id;
+
+			el.innerHTML = `
+                <span class="tab__title" title="${tab.title}">${
+				tab.title
+			}</span>
+                ${
+					tab.closable === false
+						? ''
+						: '<button class="tab__close" aria-label="Close tab">×</button>'
+				}
+            `;
+
+			// Instead of mutating local state, send commands to main
+			el.addEventListener('click', (ev) => {
+				if (ev.target.classList.contains('tab__close')) return;
+				window.layoutApi.sendCommand({
+					type: 'tab.activate',
+					id: tab.id,
+				});
+			});
+
+			const closeBtn = el.querySelector('.tab__close');
+			if (closeBtn) {
+				closeBtn.addEventListener('click', (ev) => {
+					ev.stopPropagation();
+					window.layoutApi.sendCommand({
+						type: 'tab.close',
+						id: tab.id,
+					});
+				});
+			}
+
+			this.rootEl.appendChild(el);
+		});
+	}
+
+	closeTab(id) {
+		window.layoutApi.sendCommand({ type: 'tab.close', id });
+	}
+
+	setActive(id) {
+		window.layoutApi.sendCommand({ type: 'tab.activate', id });
+	}
+}
+
+export { TabBar };

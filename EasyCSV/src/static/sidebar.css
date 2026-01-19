@@ -1,0 +1,22 @@
+.sidebar-host {
+	width: 280px;
+	min-width: 220px;
+	max-width: 420px;
+
+	height: calc(100vh - var(--titlebar-height) - var(--tabbar-height));
+	overflow: auto;
+
+	border-right: 1px solid var(--deep-border);
+	background: var(--deep-bg);
+	font-family: 'EasyMono', monospace;
+	padding-left: 0.2rem;
+}
+
+.content-host {
+	height: calc(100vh - var(--titlebar-height) - var(--tabbar-height));
+	overflow: auto;
+}
+
+.app-shell {
+	display: flex;
+}

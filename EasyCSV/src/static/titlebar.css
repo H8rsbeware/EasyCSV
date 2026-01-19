@@ -1,209 +1,208 @@
 /* Titlebar frame */
 
 #titlebar {
-  height: 32px;
-  background: var(--deep-bg);
-  color: var(--deep-clr);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  -webkit-app-region: drag;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
-  font-size: 13px;
+	height: 32px;
+	background: var(--deep-bg);
+	color: var(--deep-clr);
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	-webkit-app-region: drag;
+	font-family: 'EasySans', sans-serif;
+	font-size: 13px;
 }
 
 .titlebar-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-left: 8px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding-left: 8px;
 }
 
 .app-icon {
-  width: 14px;
-  height: 14px;
-  border-radius: 3px;
-  background: var(--deep-clr);
-  opacity: 0.7;
+	width: 14px;
+	height: 14px;
+	border-radius: 3px;
+	background: var(--deep-clr);
+	opacity: 0.7;
 }
 
 .app-title {
-  opacity: 0.8;
-  margin-right: 8px;
-  user-select: none;
+	opacity: 0.8;
+	margin-right: 8px;
+	user-select: none;
 }
 
 /* Menubar (File / Edit / View / Tools) */
 
 .menubar {
-  display: flex;
-  gap: 4px;
+	display: flex;
+	gap: 4px;
 }
 
 .menubar__item {
-  padding: 0 6px;
-  line-height: 24px;
-  border-radius: 3px;
-  cursor: default;
-  -webkit-app-region: no-drag;
-  user-select: none;
+	padding: 0 6px;
+	line-height: 24px;
+	border-radius: 3px;
+	cursor: default;
+	-webkit-app-region: no-drag;
+	user-select: none;
 }
 
 .menubar__item:hover {
-  background: var(--deep-hvr);
+	background: var(--deep-hvr);
 }
 
 .menubar__item.is-open {
-  background: var(--deep-hvr);
+	background: var(--deep-hvr);
 }
 
 /* Right side: theme + window controls */
 
 .titlebar-right {
-  display: flex;
-  align-items: center;
+	display: flex;
+	align-items: center;
 }
 
 .titlebar-btn,
 .window-controls button,
 #toggle-theme {
-  width: 36px;
-  height: 28px;
-  border: none;
-  background: transparent;
-  color: inherit;
-  -webkit-app-region: no-drag;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
+	width: 36px;
+	height: 28px;
+	border: none;
+	background: transparent;
+	color: inherit;
+	-webkit-app-region: no-drag;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
 }
 
 .titlebar-btn:hover {
-  background: var(--deep-hvr);
+	background: var(--deep-hvr);
 }
 
 .titlebar-btn--close:hover {
-  background: #e81123;
-  color: #ffffff;
+	background: #e81123;
+	color: #ffffff;
 }
 
 .titlebar-btn--theme {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: 1px solid var(--deep-hvr);
-  margin-right: 4px;
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	border: 1px solid var(--deep-hvr);
+	margin-right: 4px;
 }
 
 /* Tab bar under the titlebar */
 
 .tabbar {
-  height: 30px;
-  display: flex;
-  align-items: flex-end;
-  background: var(--deep-bg);
-  border-bottom: 1px solid var(--deep-hvr);
-  padding-left: 4px;
-  overflow-x: auto;
-  -webkit-app-region: no-drag;
+	height: 30px;
+	display: flex;
+	align-items: flex-end;
+	background: var(--deep-bg);
+	border-bottom: 1px solid var(--deep-hvr);
+	padding-left: 4px;
+	overflow-x: auto;
+	-webkit-app-region: no-drag;
 }
 
 .tab {
-  min-width: 120px;
-  max-width: 240px;
-  height: 26px;
-  margin-right: 2px;
-  padding: 0 8px;
-  border-radius: 4px 4px 0 0;
-  background: rgba(0, 0, 0, 0.15);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  cursor: default;
-  user-select: none;
+	min-width: 120px;
+	max-width: 240px;
+	height: 26px;
+	margin-right: 2px;
+	padding: 0 8px;
+	border-radius: 4px 4px 0 0;
+	background: rgba(0, 0, 0, 0.15);
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	cursor: default;
+	user-select: none;
 }
 
 .tab--active {
-  background: var(--deep-bg);
-  border-bottom: 1px solid transparent;
+	background: var(--deep-bg);
+	border-bottom: 1px solid transparent;
 }
 
 .tab__title {
-  flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 12px;
+	flex: 1;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	font-size: 12px;
 }
 
 .tab__close {
-  border: none;
-  background: transparent;
-  width: 16px;
-  height: 16px;
-  padding: 0;
-  font-size: 11px;
-  cursor: pointer;
-  opacity: 0.6;
+	border: none;
+	background: transparent;
+	width: 16px;
+	height: 16px;
+	padding: 0;
+	font-size: 11px;
+	cursor: pointer;
+	opacity: 0.6;
 }
 
 .tab__close:hover {
-  opacity: 1;
+	opacity: 1;
 }
 
 /* Menubar dropdowns */
 #menubar-dropdown-root {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 0;
-  z-index: 1000;
-  pointer-events: none;
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 0;
+	z-index: 1000;
+	pointer-events: none;
 }
 
 .menu-dropdown {
-  position: absolute;
-  pointer-events: auto;
-  min-width: 180px;
-  background: var(--deep-bg);
-  color: var(--deep-clr);
-  border: 1px solid var(--deep-hvr);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  padding: 4px 0;
-  -webkit-app-region: no-drag;
+	position: absolute;
+	pointer-events: auto;
+	min-width: 180px;
+	background: var(--deep-bg);
+	color: var(--deep-clr);
+	border: 1px solid var(--deep-hvr);
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+	padding: 4px 0;
+	-webkit-app-region: no-drag;
 }
 
 .menu-dropdown__item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 2px 12px;
-  font-size: 13px;
-  cursor: default;
-  white-space: nowrap;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 2px 12px;
+	font-size: 13px;
+	cursor: default;
+	white-space: nowrap;
 }
 
 .menu-dropdown__item:hover {
-  background: var(--deep-hvr);
+	background: var(--deep-hvr);
 }
 
 .menu-dropdown__item--disabled {
-  opacity: 0.5;
-  pointer-events: none;
+	opacity: 0.5;
+	pointer-events: none;
 }
 
 .menu-dropdown__separator {
-  height: 1px;
-  margin: 4px 6px;
-  background: var(--deep-hvr);
+	height: 1px;
+	margin: 4px 6px;
+	background: var(--deep-hvr);
 }
 
 .menu-dropdown__shortcut {
-  margin-left: 16px;
-  font-size: 11px;
-  opacity: 0.8;
+	margin-left: 16px;
+	font-size: 11px;
+	opacity: 0.8;
 }

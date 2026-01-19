@@ -46,15 +46,6 @@ function init(ipcMain, app, BrowserWindow, globalShortcut){
         }
     });
 
-
-    ipcMain.on("layout:command", (event, payload) => {
-        // take layout command and processes it
-    })
-
-    ipcMain.on("layout:update", (event) => {
-        // returns a new layout blueprint
-    })
-
 }
 
 const handleAppCommand = (command, app) => {

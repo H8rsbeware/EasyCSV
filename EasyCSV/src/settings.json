@@ -1,8 +1,8 @@
 {
     "UserStatePath": "C:/ProgramData/EasyCSV/.userstate.json",
-    "UserStateDefaultPath": "C:/Users/Oakley.Schofield/Downloads/Firefox Downloads/EasyCSV/EasyCSV/EasyCSV/src/backend/user_state/defaults/default_user_settings.json",
+    "UserStateDefaultPath": "C:/Users/alive/Documents/git/EasyCSV/EasyCSV/src/backend/user_state/defaults/default_user_settings.json",
     "UserMenuShortcutsPath": "C:/ProgramData/EasyCSV/.shortcuts.json",
-    "UserMenuShortcutsDefaultPath": "C:/Users/Oakley.Schofield/Downloads/Firefox Downloads/EasyCSV/EasyCSV/EasyCSV/src/backend/menu_state/schema/default_menu_shortcuts.json",
-    "MenuStatePath": "C:/Users/Oakley.Schofield/Downloads/Firefox Downloads/EasyCSV/EasyCSV/EasyCSV/src/backend/menu_state/schema/menu_state.json",
-    "InitialLayoutState": "C:/Users/Oakley.Schofield/Downloads/Firefox Downloads/EasyCSV/EasyCSV/EasyCSV/src/backend/layout/schema"
+    "UserMenuShortcutsDefaultPath": "C:/Users/alive/Documents/git/EasyCSV/EasyCSV/src/backend/menu_state/schema/default_menu_shortcuts.json",
+    "MenuStatePath": "C:/Users/alive/Documents/git/EasyCSV/EasyCSV/src/backend/menu_state/schema/menu_state.json",
+    "InitialLayoutState": "C:/Users/alive/Documents/git/EasyCSV/EasyCSV/src/backend/layout/schema/initial_state.json"
 }
