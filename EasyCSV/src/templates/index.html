@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 	<head>
 		<meta charset="UTF-8" />
@@ -8,6 +8,8 @@
 		<link rel="stylesheet" href="../static/global_theme.css" />
 		<link rel="stylesheet" href="../static/titlebar.css" />
 		<link rel="stylesheet" href="../static/sidebar.css" />
+		<link rel="stylesheet" href="../static/tabbar.css" />
+		<link rel="stylesheet" href="../static/content.css" />
 	</head>
 
 	<body>
@@ -60,13 +62,13 @@
 		<!-- dropdown root -->
 		<div id="menubar-dropdown-root"></div>
 
-		<!-- tabs row -->
-		<div id="tabbar" class="tabbar"></div>
-
 		<div class="app-shell">
 			<aside id="sidebar" class="sidebar-host"></aside>
 
-			<main id="main-content" class="content-host"></main>
+			<div class="content-shell">
+				<div id="tabbar" class="tabbar"></div>
+				<main id="main-content" class="content-host"></main>
+			</div>
 		</div>
 
 		<script type="module" src="../renderer.js"></script>

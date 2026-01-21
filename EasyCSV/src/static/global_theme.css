@@ -6,13 +6,18 @@
 :root[data-theme='light'] {
 	--deep-bg: #2c2c2c;
 	--deep-hvr: #444;
-	--deep-clr: #ccc;
+
+	--hr-subtle: #444;
+	--primary-font-color: #eee;
+	--secondary-font-color: #bbb;
 }
 
 :root[data-theme='dark'] {
 	--deep-bg: #ccc;
 	--deep-hvr: #aaa;
-	--deep-clr: #444;
+	--hr-subtle: #aaa;
+	--primary-font-color: #222;
+	--secondary-font-color: #555;
 }
 
 @font-face {
@@ -36,26 +41,22 @@ body {
 	font-size: 14px;
 }
 
-.sidebar__header {
-	padding: 8px;
-	border-bottom: 1px solid #333;
+footer {
+	height: 0;
 }
-.sidebar__btn {
-	width: 100%;
-}
-.tree-row {
+
+.content-shell {
+	flex: 1;
 	display: flex;
-	gap: 6px;
-	cursor: pointer;
-	user-select: none;
-	padding: 2px 6px;
+	flex-direction: column;
+	min-width: 0;
 }
-.tree-row__arrow {
-	width: 16px;
-	text-align: center;
+
+.content-host {
+	height: calc(100vh - var(--titlebar-height) - var(--tabbar-height));
+	overflow: auto;
 }
-.tree-row__label {
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
+
+.app-shell {
+	display: flex;
 }

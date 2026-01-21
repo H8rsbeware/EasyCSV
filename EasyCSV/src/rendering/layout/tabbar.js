@@ -17,6 +17,12 @@ class TabBar {
 
 		this.rootEl.innerHTML = '';
 
+		const create_divider = () => {
+			const divider = document.createElement('div');
+			divider.className = 'tabbar__divider';
+			return divider;
+		};
+
 		Array.from(this.tabs).forEach((tab) => {
 			const el = document.createElement('div');
 			el.className = 'tab';
@@ -28,8 +34,8 @@ class TabBar {
 
 			el.innerHTML = `
                 <span class="tab__title" title="${tab.title}">${
-				tab.title
-			}</span>
+					tab.title
+				}</span>
                 ${
 					tab.closable === false
 						? ''
@@ -58,6 +64,7 @@ class TabBar {
 			}
 
 			this.rootEl.appendChild(el);
+			this.rootEl.appendChild(create_divider());
 		});
 	}
 

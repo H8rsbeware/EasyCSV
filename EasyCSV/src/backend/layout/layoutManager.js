@@ -1,3 +1,4 @@
+const path = require('node:path');
 const usm = require('../user_state/userStateManager.js');
 const {
 	TabBlueprint,
@@ -73,12 +74,57 @@ class LayoutManager {
 				break;
 			}
 
+			case 'workspace.setActiveProject': {
+				const path = cmd.path;
+				const projects = [...(workspace.projects ?? [])];
+				const exists = projects.find((p) => p.root == path);
+				if (!exists) break;
+
+				workspace = new WorkspaceBlueprint({
+					projects,
+					activeProjectRoot: path,
+				});
+
+				sidebar = new SidebarBlueprint({
+					mode: sidebar.mode,
+					projectRoot: path,
+				});
+				break;
+			}
+
 			case 'tab.activate': {
 				const tab = tabs.find((t) => t.id === cmd.id);
 
 				if (tab) {
 					activeTabId = tab.id;
 				}
+				break;
+			}
+
+			case 'tab.openFile': {
+				const filePath = cmd.filePath;
+				if (typeof filePath !== 'string' || !filePath.trim()) break;
+
+				const existing = tabs.find(
+					(t) => t.kind === 'file' && t.filePath === filePath
+				);
+				if (existing) {
+					activeTabId = existing.id;
+					break;
+				}
+
+				const id = `file:${filePath}`;
+				const title = path.basename(filePath);
+
+				tabs.push(
+					new TabBlueprint({
+						id,
+						kind: 'file',
+						title,
+						filePath,
+					})
+				);
+				activeTabId = id;
 				break;
 			}
 

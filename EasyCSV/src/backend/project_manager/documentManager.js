@@ -20,7 +20,7 @@ class DocumentManager {
 			typeof expectedMtimeMs === 'number' &&
 			expectedMtimeMs !== diskMtimeMs
 		) {
-			return { ok: false, reason: 'conflict', diskMtimeMs };
+			return { ok: false, conflict: true, diskMtimeMs };
 		}
 
 		await fs.writeFile(filePath, text, 'utf8');

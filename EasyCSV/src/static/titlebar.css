@@ -1,9 +1,9 @@
 /* Titlebar frame */
 
 #titlebar {
-	height: 32px;
+	height: var(--titlebar-height);
 	background: var(--deep-bg);
-	color: var(--deep-clr);
+	color: var(--primary-font-color);
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -23,7 +23,7 @@
 	width: 14px;
 	height: 14px;
 	border-radius: 3px;
-	background: var(--deep-clr);
+	background: var(--primary-font-color);
 	opacity: 0.7;
 }
 
@@ -97,62 +97,6 @@
 	margin-right: 4px;
 }
 
-/* Tab bar under the titlebar */
-
-.tabbar {
-	height: 30px;
-	display: flex;
-	align-items: flex-end;
-	background: var(--deep-bg);
-	border-bottom: 1px solid var(--deep-hvr);
-	padding-left: 4px;
-	overflow-x: auto;
-	-webkit-app-region: no-drag;
-}
-
-.tab {
-	min-width: 120px;
-	max-width: 240px;
-	height: 26px;
-	margin-right: 2px;
-	padding: 0 8px;
-	border-radius: 4px 4px 0 0;
-	background: rgba(0, 0, 0, 0.15);
-	display: flex;
-	align-items: center;
-	gap: 6px;
-	cursor: default;
-	user-select: none;
-}
-
-.tab--active {
-	background: var(--deep-bg);
-	border-bottom: 1px solid transparent;
-}
-
-.tab__title {
-	flex: 1;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	font-size: 12px;
-}
-
-.tab__close {
-	border: none;
-	background: transparent;
-	width: 16px;
-	height: 16px;
-	padding: 0;
-	font-size: 11px;
-	cursor: pointer;
-	opacity: 0.6;
-}
-
-.tab__close:hover {
-	opacity: 1;
-}
-
 /* Menubar dropdowns */
 #menubar-dropdown-root {
 	position: fixed;
@@ -169,7 +113,7 @@
 	pointer-events: auto;
 	min-width: 180px;
 	background: var(--deep-bg);
-	color: var(--deep-clr);
+	color: var(--primary-font-color);
 	border: 1px solid var(--deep-hvr);
 	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 	padding: 4px 0;

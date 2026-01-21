@@ -24,6 +24,30 @@ let layoutState;
 let projectManager;
 let documentManager;
 
+async function openProjectFromDialog(win) {
+	const res = await dialog.showOpenDialog(win, {
+		title: 'Open Project',
+		properties: ['openDirectory'],
+	});
+
+	if (res.canceled || !res.filePaths?.length) {
+		return { ok: false };
+	}
+
+	const path = res.filePaths[0];
+
+	await projectManager.openProject(path);
+
+	layoutState.ApplyLayoutCommand({
+		type: 'workspace.openProject',
+		path,
+	});
+
+	win.webContents.send('layout:updated', layoutState.get().toJSON());
+
+	return { ok: true, path };
+}
+
 function createWindow() {
 	mainWindow = new BrowserWindow({
 		/**  sizing **/
@@ -95,6 +119,24 @@ ipcMain.on('layout:command', (event, cmd) => {
 	win.webContents.send('layout:updated', layoutState.get().toJSON());
 });
 
+ipcMain.on('menu:command', async (event, command) => {
+	const win = BrowserWindow.fromWebContents(event.sender);
+	if (!win) return;
+
+	ipc_on.handleMenuCommand(command, app, win, {
+		onFileCommand: async (cmd, targetWin) => {
+			if (cmd === 'file.open' || cmd === 'file.newProject') {
+				await openProjectFromDialog(targetWin);
+				return;
+			}
+			console.warn('Unhandled file command:', cmd);
+		},
+		onToolsCommand: (cmd) => {
+			console.warn('Unhandled tools command:', cmd);
+		},
+	});
+});
+
 ipcMain.handle('doc:open', async (_e, { filePath }) => {
 	return await documentManager.open(filePath);
 });
@@ -105,31 +147,7 @@ ipcMain.handle('doc:save', async (_e, { filePath, text, expectedMtimeMs }) => {
 
 ipcMain.handle('project:openDialog', async (event) => {
 	const win = BrowserWindow.fromWebContents(event.sender);
-
-	const res = await dialog.showOpenDialog(win, {
-		title: 'Open Project',
-		properties: ['openDirectory'],
-	});
-
-	if (res.canceled || !res.filePaths?.length) {
-		return { ok: false };
-	}
-
-	const rootPath = res.filePaths[0];
-
-	// Register project state
-	await projectManager.openProject(rootPath);
-
-	// Update layout state via the deterministic layout command
-	layoutState.ApplyLayoutCommand({
-		type: 'workspace.openProject',
-		path: rootPath,
-	});
-
-	// Push update
-	win.webContents.send('layout:updated', layoutState.get().toJSON());
-
-	return { ok: true, rootPath };
+	return await openProjectFromDialog(win);
 });
 
 ipcMain.handle(

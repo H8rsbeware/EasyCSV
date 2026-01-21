@@ -1,0 +1,63 @@
+/* Tab bar under the titlebar */
+
+.tabbar {
+	height: var(--tabbar-height);
+	display: flex;
+	align-items: flex-end;
+	background: var(--deep-bg);
+	border-bottom: 1px solid var(--deep-hvr);
+	padding-left: 4px;
+	overflow-x: auto;
+	-webkit-app-region: no-drag;
+	border-top: 1px solid var(--hr-subtle);
+}
+
+.tab {
+	min-width: 120px;
+	max-width: 240px;
+	height: 26px;
+	margin-right: 2px;
+	padding: 0 8px;
+	background: rgba(0, 0, 0, 0.15);
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	cursor: default;
+	user-select: none;
+}
+
+.tab--active {
+	background: var(--deep-bg);
+	border-bottom: 1px solid transparent;
+}
+
+.tab__title {
+	flex: 1;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	font-size: 12px;
+	color: var(--primary-font-color);
+}
+
+.tab__close {
+	border: none;
+	background: transparent;
+	width: 16px;
+	height: 16px;
+	padding: 0;
+	font-size: 11px;
+	cursor: pointer;
+	opacity: 0.6;
+	color: var(--secondary-font-color);
+}
+
+.tab__close:hover {
+	opacity: 1;
+}
+
+.tabbar__divider {
+	width: 1px;
+	height: 100%;
+	background: var(--hr-subtle);
+}

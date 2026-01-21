@@ -26,26 +26,38 @@ function init(ipcMain, app, BrowserWindow, globalShortcut){
         if (mainWindow === null) createWindow();
     });
 
-    ipcMain.on("menu:command", (event, command) => {
-        const win = BrowserWindow.fromWebContents(event.sender);
-        if (!win) return;
+}
 
-        // Route by "namespace" (app., view., edit., file., tools.)
-        if (command.startsWith("app.")) {
-            handleAppCommand(command, app);
-        } else if (command.startsWith("view.")) {
-            handleViewCommand(command, win);
-        } else if (command.startsWith("edit.")) {
-            handleEditCommand(command, win);
-        } else if (command.startsWith("file.")) {
-            handleFileCommand(command, win);
-        } else if (command.startsWith("tools.")) {
-            handleToolsCommand(command, win);
-        } else {
-            console.warn("Unknown menu command:", command);
+function handleMenuCommand(command, app, win, menuHandlers = {}) {
+    if (command.startsWith("app.")) {
+        handleAppCommand(command, app);
+        return;
+    }
+    if (command.startsWith("view.")) {
+        handleViewCommand(command, win);
+        return;
+    }
+    if (command.startsWith("edit.")) {
+        handleEditCommand(command, win);
+        return;
+    }
+    if (command.startsWith("file.")) {
+        if (typeof menuHandlers.onFileCommand === "function") {
+            menuHandlers.onFileCommand(command, win);
+            return;
         }
-    });
-
+        handleFileCommand(command, win);
+        return;
+    }
+    if (command.startsWith("tools.")) {
+        if (typeof menuHandlers.onToolsCommand === "function") {
+            menuHandlers.onToolsCommand(command, win);
+            return;
+        }
+        handleToolsCommand(command, win);
+        return;
+    }
+    console.warn("Unknown menu command:", command);
 }
 
 const handleAppCommand = (command, app) => {
@@ -125,4 +137,4 @@ const handleToolsCommand = (command, win) => {
 };
 
 
-module.exports = {init: init}
+module.exports = {init: init, handleMenuCommand: handleMenuCommand}

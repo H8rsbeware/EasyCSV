@@ -1,0 +1,108 @@
+/* File content views (text + csv) */
+
+.file-view {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	font-family: 'EasyMono', monospace;
+	color: var(--primary-font-color);
+}
+
+.file-view__header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 8px 12px;
+	border-bottom: 1px solid var(--hr-subtle);
+	background: var(--deep-bg);
+}
+
+.file-view__title {
+	font-size: 12px;
+	opacity: 0.9;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.file-view__status {
+	font-size: 11px;
+	opacity: 0.6;
+}
+
+.file-view__body {
+	flex: 1;
+	overflow: auto;
+	padding: 8px 12px;
+}
+
+/* Text viewer */
+
+.text-viewer {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.text-line {
+	display: flex;
+	gap: 10px;
+	white-space: pre;
+}
+
+.text-line__no {
+	min-width: 40px;
+	text-align: right;
+	opacity: 0.5;
+	user-select: none;
+}
+
+.text-line__body {
+	white-space: pre;
+}
+
+.text-viewer__note {
+	margin-top: 8px;
+	opacity: 0.6;
+	font-size: 12px;
+}
+
+.tok-number {
+	color: #d19a66;
+}
+
+.tok-string {
+	color: #98c379;
+}
+
+/* CSV table */
+
+.csv-table {
+	border-collapse: collapse;
+	width: 100%;
+	font-size: 12px;
+}
+
+.csv-table th,
+.csv-table td {
+	border: 1px solid var(--hr-subtle);
+	padding: 4px 6px;
+	white-space: nowrap;
+}
+
+.csv-table thead th {
+	background: var(--deep-hvr);
+	font-weight: 600;
+}
+
+.csv-table__rownum {
+	text-align: right;
+	opacity: 0.6;
+	width: 44px;
+}
+
+.csv-table__note {
+	margin-top: 8px;
+	opacity: 0.6;
+	font-size: 12px;
+}
