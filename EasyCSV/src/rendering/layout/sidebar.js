@@ -1,13 +1,14 @@
 import { cloneTemplate, wireActions } from '../ui/templates.js';
 
+// Sidebar view is UI-only; it reflects layout.workspace and never writes state directly.
 export class SidebarView {
 	constructor(rootEl) {
 		this.rootEl = rootEl;
 
-		// Workspace/project context
+		// Workspace/project context (the only "state" we accept from layout).
 		this.projectRoot = null;
 
-		// UI-only state
+		// UI-only state that can be rebuilt at any time.
 		this.expanded = new Set(); // set of expanded directory paths
 		this.childrenCache = new Map(); // dirPath -> TreeNode[]
 		this.selectedPath = null; // currently selected node path (dir or file)
@@ -16,7 +17,8 @@ export class SidebarView {
 	syncFromLayout(sidebar, workspace, tabs, activeTabId) {
 		const nextRoot = workspace?.activeProjectRoot ?? null;
 
-		// On project change, reset UI state and seed root as expanded (user can still collapse it)
+		// On project change, reset UI state and seed root as expanded.
+		// This is intentional so the first tree load is visible immediately.
 		if (nextRoot !== this.projectRoot) {
 			this.projectRoot = nextRoot;
 			this.expanded.clear();
@@ -52,7 +54,7 @@ export class SidebarView {
 		const treeEl = view.querySelector('.sidebar__tree');
 		if (!treeEl) return;
 
-		// Root row (collapsible + selectable)
+		// Root row (collapsible + selectable).
 		const rootRow = cloneTemplate('tpl-tree-row');
 		rootRow.style.paddingLeft = '0px';
 		rootRow.dataset.path = this.projectRoot;
@@ -82,7 +84,7 @@ export class SidebarView {
 
 		treeEl.appendChild(rootRow);
 
-		// Children (only if root expanded)
+		// Children are only fetched if the root is expanded.
 		if (rootExpanded) {
 			await this.renderDir(treeEl, this.projectRoot, 1);
 		}
@@ -97,6 +99,7 @@ export class SidebarView {
 	}
 
 	async getChildren(dirPath) {
+		// Cache avoids re-walking the same directory on repeated expands.
 		if (this.childrenCache.has(dirPath)) {
 			return this.childrenCache.get(dirPath);
 		}
@@ -136,7 +139,7 @@ export class SidebarView {
 			row.addEventListener('click', async (ev) => {
 				ev.stopPropagation();
 
-				// selection always updates, regardless of node type
+				// Selection always updates, regardless of node type.
 				this.selectedPath = node.path;
 
 				if (expandable) {
@@ -148,7 +151,7 @@ export class SidebarView {
 					return;
 				}
 
-				// File open (and symlink treated as file)
+				// File open (and symlink treated as file).
 				if (node.type === 'file' && window?.layoutApi?.sendCommand) {
 					window.layoutApi.sendCommand({
 						type: 'tab.openFile',
@@ -156,7 +159,7 @@ export class SidebarView {
 					});
 				}
 
-				// Re-render to apply selection highlight immediately
+				// Re-render to apply selection highlight immediately.
 				await this.render();
 			});
 

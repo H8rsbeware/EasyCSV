@@ -1,9 +1,11 @@
 const pathMod = require('node:path');
 
+// Workspace state is normalized here so UI doesn't need to guess.
 class WorkspaceBlueprint {
 	constructor({ projects = [], activeProjectRoot = null } = {}) {
 		this.projects = Array.isArray(projects)
 			? projects.map((p) => {
+					// Caller responsibility: provide valid project roots.
 					if (!p || typeof p.root !== 'string' || !p.root.trim()) {
 						throw new TypeError(
 							'WorkspaceBlueprint.projects[].root must be a non-empty string'
@@ -29,7 +31,7 @@ class WorkspaceBlueprint {
 			);
 		}
 
-		// If activeProjectRoot is set, ensure it exists in projects (or null it)
+		// Ensure activeProjectRoot stays consistent with the project list.
 		const roots = new Set(this.projects.map((p) => p.root));
 		this.activeProjectRoot =
 			activeProjectRoot && roots.has(activeProjectRoot)

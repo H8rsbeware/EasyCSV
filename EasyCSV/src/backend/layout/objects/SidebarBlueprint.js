@@ -1,6 +1,8 @@
 // SidebarBlueprint.js
+// Keep modes explicit; UI can rely on this enum.
 const SidebarModes = Object.freeze(['hidden', 'search', 'explorer']);
 
+// Minimal sidebar state; layout-only, no UI cache here.
 class SidebarBlueprint {
 	static MODES = SidebarModes;
 

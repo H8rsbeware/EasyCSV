@@ -1,3 +1,4 @@
+// Pure UI representation of a menu and its items.
 class MenuDefinition {
 	constructor(name, items) {
 		this.name = name;
@@ -8,6 +9,7 @@ class MenuDefinition {
 		return { type: 'separator' };
 	}
 
+	// Builds DOM each time the menu is opened; this keeps it stateless.
 	buildDOM(commandHandler) {
 		const container = document.createElement('div');
 		container.className = 'menu-dropdown';
@@ -52,11 +54,13 @@ class MenuDefinition {
 	}
 }
 
+// Menu bar controller for mouse/keyboard interactions.
 class MenuBar {
 	constructor(rootEl, dropdownRoot, menus, commandHandler) {
 		this.rootEl = rootEl;
 		this.dropdownRoot = dropdownRoot;
-		this.menus = menus; // {file: MenuDefinitions}
+		// Map of menu-name -> MenuDefinition.
+		this.menus = menus;
 		this.commandHandler = commandHandler;
 
 		this.activeMenuName = null;
@@ -68,7 +72,7 @@ class MenuBar {
 
 	_bindTopLevel() {
 		if (!this.rootEl) return;
-		// Bind the toggle open/close on click
+		// Toggle open/close on click.
 		this.rootEl.addEventListener('click', (ev) => {
 			const item = ev.target.closest('.menubar__item');
 			if (!item) return;
@@ -80,7 +84,7 @@ class MenuBar {
 				this.openMenu(name, item);
 			}
 		});
-		// Bind the highlight on mouse over
+		// Hover swaps menus when one is already open.
 		this.rootEl.addEventListener('mouseenter', (ev) => {
 			if (!this.activeMenuName) return;
 

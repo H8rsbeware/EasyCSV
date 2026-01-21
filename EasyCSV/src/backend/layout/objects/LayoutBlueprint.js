@@ -3,6 +3,7 @@ const { SidebarBlueprint } = require('./SidebarBlueprint');
 const { TabBlueprint } = require('./TabBlueprint');
 const { WorkspaceBlueprint } = require('./WorkspaceBlueprint');
 
+// Frozen snapshot of layout state (tabs + sidebar + workspace).
 class LayoutBlueprint {
 	constructor({
 		tabs = [],
@@ -10,24 +11,23 @@ class LayoutBlueprint {
 		sidebar = new SidebarBlueprint(),
 		workspace = new WorkspaceBlueprint(),
 	} = {}) {
-		// Coerce tabs
+		// Coerce tabs into blueprints so the renderer can trust the shape.
 		this.tabs = (Array.isArray(tabs) ? tabs : []).map((t) =>
 			TabBlueprint.fromObject(t)
 		);
 
-		// Enforce unique tab IDs (bugs here are painful later)
+		// Enforce unique tab IDs; duplicates make routing unpredictable.
 		const ids = new Set();
 		for (const t of this.tabs) {
 			if (ids.has(t.id)) throw new Error(`Duplicate tab id: ${t.id}`);
 			ids.add(t.id);
 		}
 
-		// Coerce sidebar
+		// Coerce sidebar/workspace into validated blueprints.
 		this.sidebar = SidebarBlueprint.fromObject(sidebar);
-		// Coerce workspace
 		this.workspace = WorkspaceBlueprint.fromObject(workspace);
 
-		// Active tab sanity
+		// Active tab sanity: fallback to first tab when invalid.
 		const fallback = this.tabs.length ? this.tabs[0].id : null;
 		const requested = activeTabId ?? fallback;
 

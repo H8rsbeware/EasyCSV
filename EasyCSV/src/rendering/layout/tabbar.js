@@ -1,3 +1,4 @@
+// UI-only tab bar that mirrors layout state and emits layout commands.
 class TabBar {
 	constructor(rootEl) {
 		this.rootEl = rootEl;
@@ -5,7 +6,7 @@ class TabBar {
 		this.activeId = null;
 	}
 
-	// Called from your renderLayout(layout) when layout changes
+	// Called by layout renderer; tab bar never owns the source of truth.
 	syncFromLayout(tabs, activeTabId) {
 		this.tabs = tabs;
 		this.activeId = activeTabId;
@@ -43,7 +44,7 @@ class TabBar {
 				}
             `;
 
-			// Instead of mutating local state, send commands to main
+			// We only emit layout commands; main updates state and pushes layout.
 			el.addEventListener('click', (ev) => {
 				if (ev.target.classList.contains('tab__close')) return;
 				window.layoutApi.sendCommand({

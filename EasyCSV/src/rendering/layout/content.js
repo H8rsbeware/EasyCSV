@@ -1,10 +1,14 @@
+// Renders the active tab content. It never mutates layout state directly.
 class ContentView {
 	constructor(rootEl) {
 		this.rootEl = rootEl;
 		this.currentLayout = null;
+		// Cache avoids re-reading files across tab switches.
 		this.fileCache = new Map(); // filePath -> { text, mtimeMs }
+		// In-flight reads are deduped so a fast re-render doesn't double-hit IPC.
 		this.inflight = new Map(); // filePath -> Promise
-		this.renderToken = 0; // protects against out-of-order async renders
+		// Protects against out-of-order async renders after tab switches.
+		this.renderToken = 0;
 	}
 
 	syncFromLayout(layoutBlueprint) {
@@ -82,6 +86,7 @@ class ContentView {
 
 		this.rootEl.appendChild(frame);
 
+		// Async load is isolated from the layout render, but guarded by token.
 		this.renderFileAsync(filePath, body, status, token);
 	}
 
@@ -134,6 +139,7 @@ class ContentView {
 			return await this.inflight.get(filePath);
 		}
 
+		// We keep the request promise so multiple renders can await the same IO.
 		const promise = window.docApi
 			.open(filePath)
 			.then((res) => {
@@ -164,6 +170,7 @@ class ContentView {
 		viewer.className = 'text-viewer';
 
 		const lines = text.split(/\r?\n/);
+		// Hard cap keeps very large files from freezing the renderer.
 		const maxLines = 2000;
 		const limited = lines.length > maxLines;
 		const visibleLines = limited ? lines.slice(0, maxLines) : lines;
@@ -330,6 +337,7 @@ class ContentView {
 		const table = document.createElement('table');
 		table.className = 'csv-table';
 
+		// Keep tables lightweight; CSVs can be huge.
 		const maxRows = 1000;
 		const limited = rows.length > maxRows;
 		const visibleRows = limited ? rows.slice(0, maxRows) : rows;

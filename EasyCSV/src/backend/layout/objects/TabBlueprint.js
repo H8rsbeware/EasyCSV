@@ -1,6 +1,8 @@
 // TabBlueprint.js
+// Keep the set small so layout diffs stay readable.
 const TabKinds = Object.freeze(['welcome', 'settings', 'file']);
 
+// Immutable description of a tab; UI consumes this without extra lookups.
 class TabBlueprint {
 	static KINDS = TabKinds;
 
@@ -19,6 +21,7 @@ class TabBlueprint {
 			);
 		}
 
+		// ID is used for layout routing; must stay stable.
 		this.id = id;
 		this.kind = kind;
 		this.title = title;

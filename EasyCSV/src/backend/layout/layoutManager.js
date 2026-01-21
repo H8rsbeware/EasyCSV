@@ -7,6 +7,7 @@ const {
 	WorkspaceBlueprint,
 } = require('./objects/all.js');
 
+// Owns the authoritative layout state and applies deterministic commands.
 class LayoutManager {
 	constructor(usersState) {
 		if (!(usersState instanceof usm.UserState)) {
@@ -39,7 +40,7 @@ class LayoutManager {
 	}
 
 	ApplyLayoutCommand(cmd) {
-		// get current layout state, that being tabs, active tab, and sidebar
+		// We copy current state first to keep mutations local and predictable.
 		const tabs = [...this.layoutState.tabs];
 		let activeTabId = this.layoutState.activeTabId;
 		let sidebar = new SidebarBlueprint({
@@ -55,6 +56,7 @@ class LayoutManager {
 				const path = cmd.path;
 				const projects = [...(workspace.projects ?? [])];
 
+				// We keep a single entry per root to avoid duplicate tabs/views later.
 				if (!projects.find((p) => p.root == path)) {
 					projects.push({
 						root: path,
@@ -80,6 +82,7 @@ class LayoutManager {
 				const exists = projects.find((p) => p.root == path);
 				if (!exists) break;
 
+				// Only allows switching to a known project root.
 				workspace = new WorkspaceBlueprint({
 					projects,
 					activeProjectRoot: path,
@@ -105,6 +108,7 @@ class LayoutManager {
 				const filePath = cmd.filePath;
 				if (typeof filePath !== 'string' || !filePath.trim()) break;
 
+				// Reuse existing file tabs so state (scroll, edits later) can persist.
 				const existing = tabs.find(
 					(t) => t.kind === 'file' && t.filePath === filePath
 				);
@@ -113,6 +117,7 @@ class LayoutManager {
 					break;
 				}
 
+				// File path is part of the tab id to make dedupe deterministic.
 				const id = `file:${filePath}`;
 				const title = path.basename(filePath);
 
@@ -134,7 +139,7 @@ class LayoutManager {
 
 				tabs.splice(index, 1);
 
-				// if we close the active tab, choose a neighbour
+				// If we close the active tab, choose a neighbour.
 				if (activeTabId === cmd.id) {
 					const nextTab = tabs[index] || tabs[index - 1] || null;
 					activeTabId = nextTab ? nextTab.id : null;
@@ -154,7 +159,7 @@ class LayoutManager {
 				break;
 		}
 
-		// update internal layoutState so the manager reflects the applied command
+		// Update internal layoutState so the manager reflects the applied command.
 		this.layoutState = new LayoutBlueprint({
 			tabs,
 			activeTabId,
@@ -165,7 +170,7 @@ class LayoutManager {
 	}
 
 	__extractProjectName(path) {
-		// take last folder in the path
+		// Use last folder name as a stable display name.
 		// TODO: handle edge cases, platform differences
 		const parts = path.replace(/[/\\]+$/, '').split(/[/\\]/);
 		return parts[parts.length - 1] || path;
