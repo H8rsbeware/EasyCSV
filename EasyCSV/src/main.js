@@ -92,6 +92,10 @@ function createWindow() {
 	});
 }
 
+function invertTheme(mode) {
+	return mode === 'light' ? 'dark' : 'light';
+}
+
 app.whenReady().then(() => {
 	createWindow();
 
@@ -107,12 +111,14 @@ app.whenReady().then(() => {
 
 // theme control handling
 ipcMain.handle('theme:get', () => {
-	return usersState.GetState('preferences.theme');
+	const stored = usersState.GetState('preferences.theme');
+	return invertTheme(stored);
 });
 
 ipcMain.handle('theme:set', (_, mode) => {
 	if (['light', 'dark'].includes(mode)) {
-		usersState.SetState('preferences.theme', mode);
+		usersState.SetState('preferences.theme', invertTheme(mode));
+		usersState.SaveState();
 		return true;
 	}
 	return false;
@@ -142,6 +148,10 @@ ipcMain.on('menu:command', async (event, command) => {
 		onFileCommand: async (cmd, targetWin) => {
 			if (cmd === 'file.open' || cmd === 'file.newProject') {
 				await openProjectFromDialog(targetWin);
+				return;
+			}
+			if (cmd === 'file.save') {
+				targetWin.webContents.send('file:save');
 				return;
 			}
 			console.warn('Unhandled file command:', cmd);

@@ -127,6 +127,7 @@ class LayoutManager {
 						kind: 'file',
 						title,
 						filePath,
+						dirty: false,
 					})
 				);
 				activeTabId = id;
@@ -144,6 +145,7 @@ class LayoutManager {
 						kind: 'file',
 						title,
 						filePath: null,
+						dirty: false,
 					})
 				);
 				activeTabId = id;
@@ -160,6 +162,27 @@ class LayoutManager {
 				if (activeTabId === cmd.id) {
 					const nextTab = tabs[index] || tabs[index - 1] || null;
 					activeTabId = nextTab ? nextTab.id : null;
+				}
+				break;
+			}
+
+			case 'tab.setDirty': {
+				const dirty = cmd.dirty === true;
+				const targetId = cmd.id;
+				const targetPath = cmd.filePath;
+
+				const index = tabs.findIndex((t) => {
+					if (targetId && t.id === targetId) return true;
+					if (targetPath && t.filePath === targetPath) return true;
+					return false;
+				});
+
+				if (index !== -1) {
+					const current = tabs[index];
+					tabs[index] = new TabBlueprint({
+						...current.toJSON(),
+						dirty,
+					});
 				}
 				break;
 			}

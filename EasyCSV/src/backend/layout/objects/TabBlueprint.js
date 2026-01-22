@@ -6,7 +6,7 @@ const TabKinds = Object.freeze(['welcome', 'settings', 'file']);
 class TabBlueprint {
 	static KINDS = TabKinds;
 
-	constructor({ id, kind, title, filePath = null } = {}) {
+	constructor({ id, kind, title, filePath = null, dirty = false } = {}) {
 		if (typeof id !== 'string' || !id.trim()) {
 			throw new TypeError('TabBlueprint.id must be a non-empty string');
 		}
@@ -26,6 +26,7 @@ class TabBlueprint {
 		this.kind = kind;
 		this.title = title;
 		this.filePath = filePath ?? null;
+		this.dirty = dirty === true;
 	}
 
 	/**
@@ -44,6 +45,7 @@ class TabBlueprint {
 			kind: this.kind,
 			title: this.title,
 			filePath: this.filePath,
+			dirty: this.dirty,
 		};
 	}
 }

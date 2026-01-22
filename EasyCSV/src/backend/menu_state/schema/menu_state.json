@@ -11,6 +11,10 @@
                 "command": "file.open"
             },
             {
+                "label": "Save",
+                "command": "file.save"
+            },
+            {
                 "type": "separator"
             },
             {

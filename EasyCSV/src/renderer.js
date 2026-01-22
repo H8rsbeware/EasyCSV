@@ -11,18 +11,24 @@ async function onOpenProjectClicked() {
 }
 
 import { setupTopbarUI } from './rendering/menus/setup.js';
-import { setupLayout } from './rendering/layout/setup.js';
+import { setupLayout, contentView } from './rendering/layout/setup.js';
 
 if (document.readyState === 'loading') {
 	document.addEventListener('DOMContentLoaded', async () => {
 		await setupLayout().then(() => {
 			setupTopbarUI();
 		});
+		window.fileApi?.onSave(() => {
+			contentView?.saveActive?.();
+		});
 	});
 } else {
 	(async () => {
 		await setupLayout().then(() => {
 			setupTopbarUI();
+		});
+		window.fileApi?.onSave(() => {
+			contentView?.saveActive?.();
 		});
 	})();
 }

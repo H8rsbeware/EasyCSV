@@ -1,6 +1,7 @@
 {
     "file.newProject": "Ctrl+N",
     "file.open": "Ctrl+O",
+    "file.save": "Ctrl+S",
     "app.exit": "Ctrl+Shift+F10",
     "edit.undo": "Ctrl+Z",
     "edit.redo": "Ctrl+Y",

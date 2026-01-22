@@ -12,14 +12,19 @@ export class SidebarView {
 		this.expanded = new Set(); // set of expanded directory paths
 		this.childrenCache = new Map(); // dirPath -> TreeNode[]
 		this.selectedPath = null; // currently selected node path (dir or file)
+		this.dirtyFiles = new Set();
+		this.dirtyDirs = new Set();
+		this.selectedRowEl = null;
+		this.hasRendered = false;
 	}
 
 	syncFromLayout(sidebar, workspace, tabs, activeTabId) {
 		const nextRoot = workspace?.activeProjectRoot ?? null;
+		const rootChanged = nextRoot !== this.projectRoot;
 
 		// On project change, reset UI state and seed root as expanded.
 		// This is intentional so the first tree load is visible immediately.
-		if (nextRoot !== this.projectRoot) {
+		if (rootChanged) {
 			this.projectRoot = nextRoot;
 			this.expanded.clear();
 			this.childrenCache.clear();
@@ -31,17 +36,33 @@ export class SidebarView {
 			}
 		}
 
-		this.render();
+		const dirtyChanged = this.updateDirtyState(tabs);
+
+		if (rootChanged || !this.hasRendered) {
+			this.render();
+			return;
+		}
+
+		if (dirtyChanged) {
+			this.applyDirtyClasses();
+		}
 	}
 
 	async render() {
 		if (!this.rootEl) return;
 
 		this.rootEl.innerHTML = '';
+		this.selectedRowEl = null;
+		this.hasRendered = false;
 
 		const view = cloneTemplate('tpl-sidebar');
 
 		wireActions(view, {
+			'new-file': () => {
+				if (window?.layoutApi?.sendCommand) {
+					window.layoutApi.sendCommand({ type: 'tab.newFile' });
+				}
+			},
 			'open-project': async () => {
 				await window.projectApi.openDialog();
 			},
@@ -49,25 +70,39 @@ export class SidebarView {
 
 		this.rootEl.appendChild(view);
 
-		if (!this.projectRoot) return;
-
 		const treeEl = view.querySelector('.sidebar__tree');
 		if (!treeEl) return;
 
+		if (!this.projectRoot) {
+			this.renderEmptyState(treeEl);
+			this.hasRendered = true;
+			return;
+		}
+
 		// Root row (collapsible + selectable).
 		const rootRow = cloneTemplate('tpl-tree-row');
-		rootRow.style.paddingLeft = '0px';
 		rootRow.dataset.path = this.projectRoot;
+		rootRow.style.setProperty('--depth', 0);
+		rootRow.classList.add('tree-row--dir', 'tree-row--sticky');
 
 		const rootArrow = rootRow.querySelector('.tree-row__arrow');
 		const rootLabel = rootRow.querySelector('.tree-row__label');
+		const rootIcon = rootRow.querySelector('.tree-row__icon');
 
 		const rootExpanded = this.expanded.has(this.projectRoot);
-		if (rootArrow) rootArrow.textContent = rootExpanded ? '▾' : '▸';
+		if (rootArrow) {
+			rootArrow.classList.add('material-symbols-rounded');
+			rootArrow.textContent = rootExpanded ? 'expand_more' : 'chevron_right';
+		}
 		if (rootLabel) rootLabel.textContent = this.projectRoot;
+		if (rootIcon) rootIcon.textContent = rootExpanded ? 'folder_open' : 'folder';
 
 		if (this.selectedPath === this.projectRoot) {
 			rootRow.classList.add('tree-row__selected');
+			this.selectedRowEl = rootRow;
+		}
+		if (this.dirtyDirs.has(this.projectRoot)) {
+			rootRow.classList.add('tree-row--dirty');
 		}
 
 		rootRow.addEventListener('click', async (ev) => {
@@ -88,6 +123,7 @@ export class SidebarView {
 		if (rootExpanded) {
 			await this.renderDir(treeEl, this.projectRoot, 1);
 		}
+		this.hasRendered = true;
 	}
 
 	isExpandable(node) {
@@ -118,22 +154,43 @@ export class SidebarView {
 		for (const node of nodes) {
 			const row = cloneTemplate('tpl-tree-row');
 
-			row.style.paddingLeft = `${depth * 12}px`;
+			row.style.setProperty('--depth', depth);
 			row.dataset.path = node.path;
 
 			const arrow = row.querySelector('.tree-row__arrow');
 			const label = row.querySelector('.tree-row__label');
+			const icon = row.querySelector('.tree-row__icon');
 
 			if (label) label.textContent = node.name;
 
 			const expandable = this.isExpandable(node);
 			const expanded = this.expanded.has(node.path);
 
-			if (arrow)
-				arrow.textContent = expandable ? (expanded ? '▾' : '▸') : '';
+			if (arrow) {
+				arrow.classList.add('material-symbols-rounded');
+				arrow.textContent = expandable
+					? expanded
+						? 'expand_more'
+						: 'chevron_right'
+					: '';
+			}
+			if (icon) {
+				icon.textContent = this.getIconForNode(node, expanded);
+			}
+
+			if (node.type === 'dir') {
+				row.classList.add('tree-row--dir', 'tree-row--sticky');
+			}
 
 			if (this.selectedPath === node.path) {
 				row.classList.add('tree-row__selected');
+				this.selectedRowEl = row;
+			}
+			if (
+				(node.type === 'file' && this.dirtyFiles.has(node.path)) ||
+				(node.type === 'dir' && this.dirtyDirs.has(node.path))
+			) {
+				row.classList.add('tree-row--dirty');
 			}
 
 			row.addEventListener('click', async (ev) => {
@@ -153,14 +210,16 @@ export class SidebarView {
 
 				// File open (and symlink treated as file).
 				if (node.type === 'file' && window?.layoutApi?.sendCommand) {
+					this.setSelectedRow(row);
 					window.layoutApi.sendCommand({
 						type: 'tab.openFile',
 						filePath: node.path,
 					});
+					return;
 				}
 
-				// Re-render to apply selection highlight immediately.
-				await this.render();
+				// Non-expandable dir: just update selection.
+				this.setSelectedRow(row);
 			});
 
 			container.appendChild(row);
@@ -169,5 +228,122 @@ export class SidebarView {
 				await this.renderDir(container, node.path, depth + 1);
 			}
 		}
+	}
+
+	setSelectedRow(row) {
+		if (this.selectedRowEl && this.selectedRowEl !== row) {
+			this.selectedRowEl.classList.remove('tree-row__selected');
+		}
+		row.classList.add('tree-row__selected');
+		this.selectedRowEl = row;
+	}
+
+	renderEmptyState(container) {
+		container.innerHTML = '';
+
+		const empty = document.createElement('div');
+		empty.className = 'sidebar__empty';
+		empty.textContent = 'Open a folder to see your files.';
+
+		const action = document.createElement('button');
+		action.type = 'button';
+		action.textContent = 'Open Folder';
+		action.addEventListener('click', async () => {
+			await window.projectApi.openDialog();
+		});
+
+		container.appendChild(empty);
+		container.appendChild(action);
+	}
+
+	updateDirtyState(tabs) {
+		const prevFiles = this.dirtyFiles;
+		const prevDirs = this.dirtyDirs;
+		const dirtyFiles = new Set();
+
+		for (const tab of tabs || []) {
+			if (tab?.dirty === true && tab.filePath) {
+				dirtyFiles.add(tab.filePath);
+			}
+		}
+
+		this.dirtyFiles = dirtyFiles;
+		this.dirtyDirs = this.getDirtyDirs(dirtyFiles);
+		return (
+			!this.setsEqual(prevFiles, this.dirtyFiles) ||
+			!this.setsEqual(prevDirs, this.dirtyDirs)
+		);
+	}
+
+	getDirtyDirs(dirtyFiles) {
+		const dirs = new Set();
+		if (!this.projectRoot) return dirs;
+
+		const root = this.projectRoot.replace(/[/\\]+$/, '');
+		for (const filePath of dirtyFiles) {
+			if (typeof filePath !== 'string') continue;
+			if (!filePath.startsWith(root)) continue;
+
+			let current = filePath;
+			while (true) {
+				const lastSlash = Math.max(
+					current.lastIndexOf('/'),
+					current.lastIndexOf('\\')
+				);
+				if (lastSlash <= root.length) {
+					dirs.add(root);
+					break;
+				}
+				current = current.slice(0, lastSlash);
+				dirs.add(current);
+			}
+		}
+		return dirs;
+	}
+
+	getIconForNode(node, expanded) {
+		if (node.type === 'dir') {
+			return expanded ? 'folder_open' : 'folder';
+		}
+
+		const name = node.name || '';
+		const ext = this.getExtension(name);
+
+		if (ext === 'csv' || ext === 'tsv') return 'table_chart';
+		if (
+			['txt', 'md', 'json', 'js', 'ts', 'css', 'html', 'xml', 'yml', 'yaml']
+				.includes(ext)
+		)
+			return 'text_fields';
+
+		return 'help';
+	}
+
+	getExtension(fileName) {
+		const match = /\.([^.]+)$/.exec(fileName);
+		return match ? match[1].toLowerCase() : '';
+	}
+
+	applyDirtyClasses() {
+		if (!this.rootEl) return;
+		const rows = this.rootEl.querySelectorAll('.tree-row');
+		rows.forEach((row) => {
+			const path = row.dataset.path;
+			if (!path) return;
+			const isDir = row.classList.contains('tree-row--dir');
+			const dirty =
+				(isDir && this.dirtyDirs.has(path)) ||
+				(!isDir && this.dirtyFiles.has(path));
+			row.classList.toggle('tree-row--dirty', dirty);
+		});
+	}
+
+	setsEqual(a, b) {
+		if (a === b) return true;
+		if (!a || !b || a.size !== b.size) return false;
+		for (const v of a) {
+			if (!b.has(v)) return false;
+		}
+		return true;
 	}
 }

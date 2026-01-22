@@ -40,6 +40,13 @@ contextBridge.exposeInMainWorld('docApi', {
 	openDialog: () => ipcRenderer.invoke('doc:openDialog'),
 });
 
+contextBridge.exposeInMainWorld('fileApi', {
+	onSave: (handler) => {
+		if (typeof handler !== 'function') return;
+		ipcRenderer.on('file:save', () => handler());
+	},
+});
+
 contextBridge.exposeInMainWorld('userApi', {
 	getRecentProjects: () => ipcRenderer.invoke('user:getRecentProjects'),
 });

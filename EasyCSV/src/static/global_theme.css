@@ -6,12 +6,14 @@
 }
 
 :root[data-theme='light'] {
-	--deep-bg: #2c2c2c;
+	--deep-bg: #111111;
 	--deep-hvr: #444;
 
 	--hr-subtle: #444;
 	--primary-font-color: #eee;
 	--secondary-font-color: #bbb;
+
+	--toggle-bg: #3a3a3a;
 
 	--app-bg: #202020;
 	--panel-bg: #2b2b2b;
@@ -32,10 +34,12 @@
 	--primary-font-color: #222;
 	--secondary-font-color: #555;
 
+	--toggle-bg: #e2e2e2;
+
 	--app-bg: #f2f2f2;
 	--panel-bg: #e8e8e8;
 	--panel-elev: #ffffff;
-	--accent: #2f6feb;
+	--accent: #f28c28;
 	--button-bg: #e2e2e2;
 	--button-hvr: #d6d6d6;
 	--button-text: #1f1f1f;
