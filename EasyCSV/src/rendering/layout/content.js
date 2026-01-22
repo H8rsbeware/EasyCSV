@@ -403,6 +403,8 @@ class ContentView {
 		});
 
 		syncGutter();
+		// Focus editor so menu edit commands (cut/copy/paste/undo/redo) target it.
+		requestAnimationFrame(() => textarea.focus());
 	}
 
 	// Minimal tokenizer for simple coloring: strings and numbers only.

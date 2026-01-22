@@ -5,7 +5,7 @@
 	display: flex;
 	align-items: flex-end;
 	background: var(--deep-bg);
-	border-bottom: 1px solid var(--deep-hvr);
+
 	padding-left: 4px;
 	overflow-x: auto;
 	-webkit-app-region: no-drag;
@@ -23,11 +23,12 @@
 	gap: 6px;
 	cursor: default;
 	user-select: none;
+	border-bottom: 1px solid var(--hr-subtle);
 }
 
 .tab--active {
 	background: var(--deep-bg);
-	border-bottom: 1px solid transparent;
+	border-bottom: none;
 }
 
 .tab__title {

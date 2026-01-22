@@ -47,6 +47,11 @@ class MenuDefinition {
 				}
 			});
 
+			// Prevent focus loss so selection stays intact in the editor.
+			row.addEventListener('mousedown', (ev) => {
+				ev.preventDefault();
+			});
+
 			container.appendChild(row);
 		});
 
@@ -84,16 +89,19 @@ class MenuBar {
 				this.openMenu(name, item);
 			}
 		});
-		// Hover swaps menus when one is already open.
-		this.rootEl.addEventListener('mouseenter', (ev) => {
-			if (!this.activeMenuName) return;
-
+		// Hover opens menus without requiring focus (keeps text selection intact).
+		this.rootEl.addEventListener('mouseover', (ev) => {
 			const item = ev.target.closest('.menubar__item');
 			if (!item) return;
 
 			const name = item.dataset.menu;
-			if (name && name !== this.activeMenuName) {
-				this.openMenu(name, item);
+			if (name) this.openMenu(name, item);
+		});
+
+		// Prevent titlebar clicks from stealing text selection in the editor.
+		this.rootEl.addEventListener('mousedown', (ev) => {
+			if (ev.target.closest('.menubar__item')) {
+				ev.preventDefault();
 			}
 		});
 	}

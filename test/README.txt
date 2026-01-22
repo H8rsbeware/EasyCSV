@@ -4,3 +4,7 @@ Folders:
 - data
 - docs
 - nested\deep
+
+beep
+
+beep
