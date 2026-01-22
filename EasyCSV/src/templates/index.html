@@ -81,12 +81,29 @@
 		</script>
 	</body>
 
-	<template id="tpl-welcome">
+		<template id="tpl-welcome">
 		<div class="welcome">
-			<h1>Welcome</h1>
+			<div class="welcome__hero">
+				<div class="welcome__title">Welcome to EasyCSV</div>
+				<div class="welcome__subtitle">
+					Open a folder or file to get started.
+				</div>
+			</div>
 
-			<div class="welcome__actions">
-				<button data-action="open-project">Open Project…</button>
+			<div class="welcome__grid">
+				<div class="welcome__card">
+					<div class="welcome__card-title">Get Started</div>
+					<div class="welcome__actions">
+						<button data-action="new-file">New File</button>
+						<button data-action="open-file">Open File</button>
+						<button data-action="open-folder">Open Folder</button>
+					</div>
+				</div>
+
+				<div class="welcome__card">
+					<div class="welcome__card-title">Recent Projects</div>
+					<div class="welcome__recent" data-role="recent-list"></div>
+				</div>
 			</div>
 		</div>
 	</template>
@@ -120,3 +137,4 @@
 		</div>
 	</template>
 </html>
+

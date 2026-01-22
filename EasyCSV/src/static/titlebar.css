@@ -84,17 +84,40 @@
 	background: var(--deep-hvr);
 }
 
+.titlebar-btn:focus-visible {
+	outline: 2px solid var(--focus-ring);
+	outline-offset: -1px;
+}
+
 .titlebar-btn--close:hover {
 	background: #e81123;
 	color: #ffffff;
 }
 
 .titlebar-btn--theme {
-	width: 24px;
-	height: 24px;
-	border-radius: 50%;
+	width: 42px;
+	height: 22px;
+	border-radius: 999px;
 	border: 1px solid var(--deep-hvr);
-	margin-right: 4px;
+	margin-right: 8px;
+	background: var(--panel-bg);
+	position: relative;
+}
+
+.titlebar-btn--theme::after {
+	content: '';
+	position: absolute;
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	left: 3px;
+	top: 2px;
+	background: var(--accent);
+	transition: left 0.15s ease;
+}
+
+:root[data-theme='dark'] .titlebar-btn--theme::after {
+	left: 22px;
 }
 
 /* Menubar dropdowns */

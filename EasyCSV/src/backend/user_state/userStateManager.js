@@ -132,6 +132,10 @@ class UserState {
         const pathArray = setting_str.split(".");
         return follow(pathArray, this.state, value);
     }
+
+    SaveState() {
+        fs.writeFileSync(this.statePath, JSON.stringify(this.state, null, 2), "utf8");
+    }
 }
 
 module.exports = { UserState: UserState };

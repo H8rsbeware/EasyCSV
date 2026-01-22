@@ -1,14 +1,19 @@
 // Renders the active tab content. It never mutates layout state directly.
+import { cloneTemplate, wireActions } from '../ui/templates.js';
+
 class ContentView {
 	constructor(rootEl) {
 		this.rootEl = rootEl;
 		this.currentLayout = null;
 		// Cache avoids re-reading files across tab switches.
 		this.fileCache = new Map(); // filePath -> { text, mtimeMs }
+		// Editor state stays local; backend only sees saves.
+		this.editorState = new Map(); // filePath -> { text, mtimeMs, dirty }
 		// In-flight reads are deduped so a fast re-render doesn't double-hit IPC.
 		this.inflight = new Map(); // filePath -> Promise
 		// Protects against out-of-order async renders after tab switches.
 		this.renderToken = 0;
+		this.welcomeToken = 0;
 	}
 
 	syncFromLayout(layoutBlueprint) {
@@ -49,14 +54,38 @@ class ContentView {
 	}
 
 	renderWelcome(tab) {
-		// Basic welcome page
-		// LATER: buttons that send commands like tab.openProject, tools.settings, etc.
+		const view = cloneTemplate('tpl-welcome');
+		this.rootEl.appendChild(view);
+
+		wireActions(view, {
+			'new-file': () => {
+				window.layoutApi.sendCommand({ type: 'tab.newFile' });
+			},
+			'open-file': async () => {
+				const res = await window.docApi.openDialog();
+				if (res?.ok && res.path) {
+					window.layoutApi.sendCommand({
+						type: 'tab.openFile',
+						filePath: res.path,
+					});
+				}
+			},
+			'open-folder': async () => {
+				await window.projectApi.openDialog();
+			},
+		});
+
+		const recentList = view.querySelector('[data-role="recent-list"]');
+		if (recentList) {
+			recentList.textContent = 'Loading recent projects...';
+			this.renderRecentProjects(recentList, ++this.welcomeToken);
+		}
 	}
 
 	renderFile(tab) {
 		const filePath = tab.filePath;
 		if (!filePath) {
-			this.rootEl.textContent = 'No file path provided.';
+			this.renderUntitled(tab);
 			return;
 		}
 
@@ -113,7 +142,7 @@ class ContentView {
 			return;
 		}
 
-		this.renderText(body, text);
+		this.renderTextEditor(body, filePath, result);
 	}
 
 	renderSettings(tab) {
@@ -123,6 +152,67 @@ class ContentView {
 
 	renderUnknown(tab) {
 		this.rootEl.textContent = `Unknown tab kind: ${tab.kind}`;
+	}
+
+	renderUntitled(tab) {
+		const view = cloneTemplate('tpl-file-editor');
+		const title = view.querySelector('.editor__title');
+		if (title) title.textContent = tab.title || 'Untitled';
+
+		const status = view.querySelector('.editor__status');
+		if (status) status.textContent = 'Unsaved file';
+
+		const saveBtn = view.querySelector('[data-action="save"]');
+		if (saveBtn) saveBtn.disabled = true;
+
+		this.rootEl.appendChild(view);
+	}
+
+	async renderRecentProjects(listEl, token) {
+		const items = (await window.userApi.getRecentProjects()) || [];
+
+		if (token !== this.welcomeToken) return;
+
+		listEl.innerHTML = '';
+
+		if (!items.length) {
+			const empty = document.createElement('div');
+			empty.className = 'welcome__empty';
+			empty.textContent = 'No recent projects yet.';
+			listEl.appendChild(empty);
+			return;
+		}
+
+		for (const item of items) {
+			const row = document.createElement('button');
+			row.className = 'welcome-recent';
+			row.type = 'button';
+
+			const name = document.createElement('div');
+			name.className = 'welcome-recent__name';
+			name.textContent = item.prj_name || item.prj_path;
+
+			const path = document.createElement('div');
+			path.className = 'welcome-recent__path';
+			path.textContent = item.prj_path || '';
+
+			const time = document.createElement('div');
+			time.className = 'welcome-recent__time';
+			time.textContent = item.last_opened
+				? new Date(item.last_opened).toLocaleString()
+				: '';
+
+			row.appendChild(name);
+			row.appendChild(path);
+			row.appendChild(time);
+
+			row.addEventListener('click', async () => {
+				if (!item.prj_path) return;
+				await window.projectApi.openPath(item.prj_path);
+			});
+
+			listEl.appendChild(row);
+		}
 	}
 
 	getExtension(filePath) {
@@ -211,6 +301,108 @@ class ContentView {
 		}
 
 		container.appendChild(viewer);
+	}
+
+	renderTextEditor(container, filePath, result) {
+		container.innerHTML = '';
+
+		const state =
+			this.editorState.get(filePath) || {
+				text: result.text ?? '',
+				mtimeMs: result.mtimeMs ?? null,
+				dirty: false,
+			};
+
+		// If this is the first time opening, seed editor state from disk.
+		if (!this.editorState.has(filePath)) {
+			this.editorState.set(filePath, state);
+		}
+
+		const editor = document.createElement('div');
+		editor.className = 'text-editor';
+
+		const gutter = document.createElement('div');
+		gutter.className = 'text-editor__gutter';
+
+		const textarea = document.createElement('textarea');
+		textarea.className = 'text-editor__ta';
+		textarea.spellcheck = false;
+		textarea.value = state.text;
+
+		const footer = document.createElement('div');
+		footer.className = 'text-editor__footer';
+
+		const status = document.createElement('div');
+		status.className = 'text-editor__status';
+		status.textContent = state.dirty ? 'Unsaved changes' : 'Saved';
+
+		const saveBtn = document.createElement('button');
+		saveBtn.type = 'button';
+		saveBtn.textContent = 'Save';
+		saveBtn.disabled = !state.dirty;
+
+		footer.appendChild(status);
+		footer.appendChild(saveBtn);
+
+		editor.appendChild(gutter);
+		editor.appendChild(textarea);
+		container.appendChild(editor);
+		container.appendChild(footer);
+
+		const syncGutter = () => {
+			const lines = textarea.value.split(/\r?\n/).length;
+			gutter.innerHTML = '';
+			for (let i = 1; i <= lines; i += 1) {
+				const ln = document.createElement('div');
+				ln.className = 'text-editor__line-no';
+				ln.textContent = String(i);
+				gutter.appendChild(ln);
+			}
+		};
+
+		const markDirty = () => {
+			state.text = textarea.value;
+			state.dirty = true;
+			this.editorState.set(filePath, state);
+			status.textContent = 'Unsaved changes';
+			saveBtn.disabled = false;
+		};
+
+		textarea.addEventListener('input', () => {
+			syncGutter();
+			markDirty();
+		});
+
+		textarea.addEventListener('scroll', () => {
+			gutter.scrollTop = textarea.scrollTop;
+		});
+
+		saveBtn.addEventListener('click', async () => {
+			const res = await window.docApi.save(
+				filePath,
+				state.text,
+				state.mtimeMs
+			);
+			if (res?.ok) {
+				state.mtimeMs = res.newMtimeMs;
+				state.dirty = false;
+				this.editorState.set(filePath, state);
+				status.textContent = 'Saved';
+				saveBtn.disabled = true;
+				this.fileCache.set(filePath, {
+					text: state.text,
+					mtimeMs: state.mtimeMs,
+				});
+				return;
+			}
+			if (res?.conflict) {
+				status.textContent = 'Conflict: file changed on disk';
+				return;
+			}
+			status.textContent = 'Save failed';
+		});
+
+		syncGutter();
 	}
 
 	// Minimal tokenizer for simple coloring: strings and numbers only.

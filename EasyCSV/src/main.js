@@ -24,6 +24,20 @@ let layoutState;
 let projectManager;
 let documentManager;
 
+function rememberRecentProject(rootPath) {
+	const existing = usersState.GetState('recently_opened') || [];
+	const name = path.basename(rootPath.replace(/[/\\]+$/, '')) || rootPath;
+	const now = new Date().toISOString();
+
+	const next = [
+		{ prj_name: name, prj_path: rootPath, last_opened: now },
+		...existing.filter((p) => p && p.prj_path !== rootPath),
+	].slice(0, 10);
+
+	usersState.SetState('recently_opened', next);
+	usersState.SaveState();
+}
+
 async function openProjectFromDialog(win) {
 	const res = await dialog.showOpenDialog(win, {
 		title: 'Open Project',
@@ -37,6 +51,7 @@ async function openProjectFromDialog(win) {
 	const path = res.filePaths[0];
 
 	await projectManager.openProject(path);
+	rememberRecentProject(path);
 
 	layoutState.ApplyLayoutCommand({
 		type: 'workspace.openProject',
@@ -137,8 +152,26 @@ ipcMain.on('menu:command', async (event, command) => {
 	});
 });
 
+ipcMain.handle('user:getRecentProjects', () => {
+	return usersState.GetState('recently_opened') || [];
+});
+
 ipcMain.handle('doc:open', async (_e, { filePath }) => {
 	return await documentManager.open(filePath);
+});
+
+ipcMain.handle('doc:openDialog', async (event) => {
+	const win = BrowserWindow.fromWebContents(event.sender);
+	const res = await dialog.showOpenDialog(win, {
+		title: 'Open File',
+		properties: ['openFile'],
+	});
+
+	if (res.canceled || !res.filePaths?.length) {
+		return { ok: false };
+	}
+
+	return { ok: true, path: res.filePaths[0] };
 });
 
 ipcMain.handle('doc:save', async (_e, { filePath, text, expectedMtimeMs }) => {
@@ -157,3 +190,19 @@ ipcMain.handle(
 		return nodes; // plain JSON DTOs
 	}
 );
+
+ipcMain.handle('project:openPath', async (event, { path: rootPath }) => {
+	const win = BrowserWindow.fromWebContents(event.sender);
+	if (!rootPath) return { ok: false };
+
+	await projectManager.openProject(rootPath);
+	rememberRecentProject(rootPath);
+
+	layoutState.ApplyLayoutCommand({
+		type: 'workspace.openProject',
+		path: rootPath,
+	});
+
+	win.webContents.send('layout:updated', layoutState.get().toJSON());
+	return { ok: true, path: rootPath };
+});

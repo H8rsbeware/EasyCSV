@@ -1,6 +1,8 @@
 :root {
 	--titlebar-height: 36px;
 	--tabbar-height: 34px;
+	--radius-sm: 6px;
+	--radius-md: 10px;
 }
 
 :root[data-theme='light'] {
@@ -10,6 +12,17 @@
 	--hr-subtle: #444;
 	--primary-font-color: #eee;
 	--secondary-font-color: #bbb;
+
+	--app-bg: #202020;
+	--panel-bg: #2b2b2b;
+	--panel-elev: #333;
+	--accent: #78a9ff;
+	--button-bg: #3a3a3a;
+	--button-hvr: #4a4a4a;
+	--button-text: #f1f1f1;
+	--scroll-track: #2a2a2a;
+	--scroll-thumb: #575757;
+	--focus-ring: rgba(120, 169, 255, 0.4);
 }
 
 :root[data-theme='dark'] {
@@ -18,6 +31,17 @@
 	--hr-subtle: #aaa;
 	--primary-font-color: #222;
 	--secondary-font-color: #555;
+
+	--app-bg: #f2f2f2;
+	--panel-bg: #e8e8e8;
+	--panel-elev: #ffffff;
+	--accent: #2f6feb;
+	--button-bg: #e2e2e2;
+	--button-hvr: #d6d6d6;
+	--button-text: #1f1f1f;
+	--scroll-track: #e2e2e2;
+	--scroll-thumb: #b3b3b3;
+	--focus-ring: rgba(47, 111, 235, 0.35);
 }
 
 @font-face {
@@ -39,6 +63,8 @@ body {
 	margin: 0;
 	font-family: 'EasySans', sans-serif;
 	font-size: 14px;
+	background: var(--app-bg);
+	color: var(--primary-font-color);
 }
 
 footer {
@@ -59,4 +85,46 @@ footer {
 
 .app-shell {
 	display: flex;
+}
+
+/* Global button styling (excluding titlebar controls) */
+button:not(.titlebar-btn):not(#toggle-theme) {
+	font-family: 'EasySans', sans-serif;
+	font-size: 13px;
+	color: var(--button-text);
+	background: var(--button-bg);
+	border: 1px solid var(--deep-hvr);
+	border-radius: var(--radius-sm);
+	padding: 6px 10px;
+	cursor: pointer;
+}
+
+button:not(.titlebar-btn):not(#toggle-theme):hover {
+	background: var(--button-hvr);
+}
+
+button:not(.titlebar-btn):not(#toggle-theme):focus-visible {
+	outline: 2px solid var(--focus-ring);
+	outline-offset: 1px;
+}
+
+/* Scrollbar styling */
+* {
+	scrollbar-width: thin;
+	scrollbar-color: var(--scroll-thumb) var(--scroll-track);
+}
+
+*::-webkit-scrollbar {
+	width: 10px;
+	height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+	background: var(--scroll-track);
+}
+
+*::-webkit-scrollbar-thumb {
+	background: var(--scroll-thumb);
+	border-radius: 8px;
+	border: 2px solid var(--scroll-track);
 }

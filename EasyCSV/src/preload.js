@@ -30,10 +30,16 @@ contextBridge.exposeInMainWorld('projectApi', {
 	openDialog: () => ipcRenderer.invoke('project:openDialog'),
 	listChildren: (rootPath, dirPath) =>
 		ipcRenderer.invoke('project:listChildren', { rootPath, dirPath }),
+	openPath: (path) => ipcRenderer.invoke('project:openPath', { path }),
 });
 
 contextBridge.exposeInMainWorld('docApi', {
 	open: (filePath) => ipcRenderer.invoke('doc:open', { filePath }),
 	save: (filePath, text, expectedMtimeMs) =>
 		ipcRenderer.invoke('doc:save', { filePath, text, expectedMtimeMs }),
+	openDialog: () => ipcRenderer.invoke('doc:openDialog'),
+});
+
+contextBridge.exposeInMainWorld('userApi', {
+	getRecentProjects: () => ipcRenderer.invoke('user:getRecentProjects'),
 });

@@ -133,6 +133,23 @@ class LayoutManager {
 				break;
 			}
 
+			case 'tab.newFile': {
+				const nextIndex = this.__nextUntitledIndex(tabs);
+				const title = `Untitled-${nextIndex}`;
+				const id = `untitled:${nextIndex}`;
+
+				tabs.push(
+					new TabBlueprint({
+						id,
+						kind: 'file',
+						title,
+						filePath: null,
+					})
+				);
+				activeTabId = id;
+				break;
+			}
+
 			case 'tab.close': {
 				const index = tabs.findIndex((t) => t.id === cmd.id);
 				if (index === -1) break;
@@ -174,6 +191,19 @@ class LayoutManager {
 		// TODO: handle edge cases, platform differences
 		const parts = path.replace(/[/\\]+$/, '').split(/[/\\]/);
 		return parts[parts.length - 1] || path;
+	}
+
+	__nextUntitledIndex(tabs) {
+		let max = 0;
+		for (const t of tabs) {
+			if (typeof t.id !== 'string') continue;
+			const match = /^untitled:(\d+)$/.exec(t.id);
+			if (match) {
+				const n = Number(match[1]);
+				if (Number.isFinite(n)) max = Math.max(max, n);
+			}
+		}
+		return max + 1;
 	}
 
 	get() {

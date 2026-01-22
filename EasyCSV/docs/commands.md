@@ -9,6 +9,7 @@ Single source of truth for commands, IPC channels, and side effects.
 | workspace.openProject | renderer -> main | layout:command (send) | { type, path } | src/backend/layout/layoutManager.js ApplyLayoutCommand | Mutates layout.workspace, updates sidebar.projectRoot, emits layout:updated |
 | workspace.setActiveProject | renderer -> main | layout:command (send) | { type, path } | src/backend/layout/layoutManager.js ApplyLayoutCommand | Updates activeProjectRoot and sidebar.projectRoot, emits layout:updated |
 | tab.openFile | renderer -> main | layout:command (send) | { type, filePath } | src/backend/layout/layoutManager.js ApplyLayoutCommand | Adds/activates file tab, emits layout:updated |
+| tab.newFile | renderer -> main | layout:command (send) | { type } | src/backend/layout/layoutManager.js ApplyLayoutCommand | Creates untitled file tab, emits layout:updated |
 | tab.activate | renderer -> main | layout:command (send) | { type, id } | src/backend/layout/layoutManager.js ApplyLayoutCommand | Sets activeTabId, emits layout:updated |
 | tab.close | renderer -> main | layout:command (send) | { type, id } | src/backend/layout/layoutManager.js ApplyLayoutCommand | Removes tab, updates activeTabId, emits layout:updated |
 | sidebar.setMode | renderer -> main | layout:command (send) | { type, mode } | src/backend/layout/layoutManager.js ApplyLayoutCommand | Updates sidebar.mode, emits layout:updated |
@@ -28,6 +29,9 @@ Single source of truth for commands, IPC channels, and side effects.
 | project:listChildren | renderer -> main | project:listChildren (invoke/handle) | { rootPath, dirPath } | src/main.js ipcMain.handle | Reads filesystem, returns TreeNode[] |
 | doc:open | renderer -> main | doc:open (invoke/handle) | { filePath } | src/main.js ipcMain.handle | Reads file, returns { ok, text, mtimeMs } |
 | doc:save | renderer -> main | doc:save (invoke/handle) | { filePath, text, expectedMtimeMs } | src/main.js ipcMain.handle | Writes file, returns { ok, newMtimeMs } or { ok:false, conflict:true, diskMtimeMs } |
+| doc:openDialog | renderer -> main | doc:openDialog (invoke/handle) | {} | src/main.js ipcMain.handle | Shows file dialog, returns { ok, path } |
+| project:openPath | renderer -> main | project:openPath (invoke/handle) | { path } | src/main.js ipcMain.handle | Opens project by path, applies workspace.openProject, emits layout:updated |
+| user:getRecentProjects | renderer -> main | user:getRecentProjects (invoke/handle) | {} | src/main.js ipcMain.handle | Returns recently_opened from user state |
 
 ## Menu commands (renderer -> main)
 
