@@ -16,6 +16,8 @@ export class SidebarView {
 		this.dirtyDirs = new Set();
 		this.selectedRowEl = null;
 		this.hasRendered = false;
+		this.rowMap = new Map(); // path -> row element
+		this.dirtyChangedPaths = new Set();
 	}
 
 	syncFromLayout(sidebar, workspace, tabs, activeTabId) {
@@ -54,6 +56,8 @@ export class SidebarView {
 		this.rootEl.innerHTML = '';
 		this.selectedRowEl = null;
 		this.hasRendered = false;
+		this.rowMap.clear();
+		this.dirtyChangedPaths.clear();
 
 		const view = cloneTemplate('tpl-sidebar');
 
@@ -104,6 +108,7 @@ export class SidebarView {
 		if (this.dirtyDirs.has(this.projectRoot)) {
 			rootRow.classList.add('tree-row--dirty');
 		}
+		this.rowMap.set(this.projectRoot, rootRow);
 
 		rootRow.addEventListener('click', async (ev) => {
 			ev.stopPropagation();
@@ -223,6 +228,7 @@ export class SidebarView {
 			});
 
 			container.appendChild(row);
+			this.rowMap.set(node.path, row);
 
 			if (expanded && expandable) {
 				await this.renderDir(container, node.path, depth + 1);
@@ -269,10 +275,13 @@ export class SidebarView {
 
 		this.dirtyFiles = dirtyFiles;
 		this.dirtyDirs = this.getDirtyDirs(dirtyFiles);
-		return (
-			!this.setsEqual(prevFiles, this.dirtyFiles) ||
-			!this.setsEqual(prevDirs, this.dirtyDirs)
+		this.dirtyChangedPaths = this.getDirtyChangedPaths(
+			prevFiles,
+			this.dirtyFiles,
+			prevDirs,
+			this.dirtyDirs
 		);
+		return this.dirtyChangedPaths.size > 0;
 	}
 
 	getDirtyDirs(dirtyFiles) {
@@ -326,16 +335,19 @@ export class SidebarView {
 
 	applyDirtyClasses() {
 		if (!this.rootEl) return;
-		const rows = this.rootEl.querySelectorAll('.tree-row');
-		rows.forEach((row) => {
-			const path = row.dataset.path;
-			if (!path) return;
+		const changed = this.dirtyChangedPaths;
+		if (!changed || changed.size === 0) return;
+
+		for (const path of changed) {
+			const row = this.rowMap.get(path);
+			if (!row) continue;
 			const isDir = row.classList.contains('tree-row--dir');
 			const dirty =
 				(isDir && this.dirtyDirs.has(path)) ||
 				(!isDir && this.dirtyFiles.has(path));
 			row.classList.toggle('tree-row--dirty', dirty);
-		});
+		}
+		this.dirtyChangedPaths.clear();
 	}
 
 	setsEqual(a, b) {
@@ -345,5 +357,24 @@ export class SidebarView {
 			if (!b.has(v)) return false;
 		}
 		return true;
+	}
+
+	getDirtyChangedPaths(prevFiles, nextFiles, prevDirs, nextDirs) {
+		const changed = new Set();
+
+		for (const p of prevFiles || []) {
+			if (!nextFiles?.has(p)) changed.add(p);
+		}
+		for (const p of nextFiles || []) {
+			if (!prevFiles?.has(p)) changed.add(p);
+		}
+		for (const p of prevDirs || []) {
+			if (!nextDirs?.has(p)) changed.add(p);
+		}
+		for (const p of nextDirs || []) {
+			if (!prevDirs?.has(p)) changed.add(p);
+		}
+
+		return changed;
 	}
 }

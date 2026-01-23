@@ -7,6 +7,7 @@ class ContentView {
 	constructor(rootEl) {
 		this.rootEl = rootEl;
 		this.currentLayout = null;
+		this.lastRenderKey = null;
 		// Cache avoids re-reading files across tab switches.
 		this.fileCache = new Map(); // filePath -> { text, mtimeMs }
 		// Editor state stays local; backend only sees saves.
@@ -25,6 +26,19 @@ class ContentView {
 
 	syncFromLayout(layoutBlueprint) {
 		this.currentLayout = layoutBlueprint;
+
+		const active = layoutBlueprint?.tabs?.find(
+			(t) => t.id === layoutBlueprint.activeTabId
+		);
+		const nextKey = active
+			? `${active.id}|${active.kind}|${active.filePath ?? ''}`
+			: 'empty';
+
+		if (this.lastRenderKey === nextKey) {
+			return;
+		}
+
+		this.lastRenderKey = nextKey;
 		this.render();
 	}
 
@@ -98,45 +112,8 @@ class ContentView {
 		if (!activeTab || activeTab.kind !== 'file') return;
 		if (!activeTab.filePath) return;
 
-		const filePath = activeTab.filePath;
-		const state = this.textRenderer.editorState.get(filePath);
-		if (!state || !state.dirty) return;
-
-		let res;
-		try {
-			res = await window.docApi.save(
-				filePath,
-				state.text,
-				state.mtimeMs
-			);
-		} catch (err) {
-			res = { ok: false, reason: err?.message || String(err) };
-		}
-		if (res?.ok) {
-			state.mtimeMs = res.newMtimeMs;
-			state.dirty = false;
-			this.textRenderer.editorState.set(filePath, state);
-			this.fileCache.set(filePath, {
-				text: state.text,
-				mtimeMs: state.mtimeMs,
-			});
-			this.textRenderer.notifyDirtyState(filePath, false);
-			const status = this.rootEl?.querySelector('.text-editor__status');
-			const saveBtn = this.rootEl?.querySelector(
-				'.text-editor__footer button'
-			);
-			if (status) status.textContent = 'Saved';
-			if (saveBtn) saveBtn.disabled = true;
-			return;
-		}
-
-		const status = this.rootEl?.querySelector('.text-editor__status');
-		if (!status) return;
-		if (res?.conflict) {
-			status.textContent = 'Conflict: file changed on disk';
-			return;
-		}
-		status.textContent = 'Save failed';
+		const res = await this.textRenderer.saveActiveFile();
+		if (!res || res.ok !== false) return;
 	}
 
 	renderFile(tab) {

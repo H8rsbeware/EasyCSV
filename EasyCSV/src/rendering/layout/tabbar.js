@@ -4,10 +4,17 @@ class TabBar {
 		this.rootEl = rootEl;
 		this.tabs = [];
 		this.activeId = null;
+		this.lastSignature = null;
 	}
 
 	// Called by layout renderer; tab bar never owns the source of truth.
 	syncFromLayout(tabs, activeTabId) {
+		const signature = this.buildSignature(tabs, activeTabId);
+		if (this.lastSignature === signature) {
+			return;
+		}
+		this.lastSignature = signature;
+
 		this.tabs = tabs;
 		this.activeId = activeTabId;
 		this.render();
@@ -75,6 +82,14 @@ class TabBar {
 
 	setActive(id) {
 		window.layoutApi.sendCommand({ type: 'tab.activate', id });
+	}
+
+	buildSignature(tabs, activeTabId) {
+		const parts = [`active:${activeTabId ?? ''}`];
+		for (const tab of tabs || []) {
+			parts.push(`${tab.id}:${tab.title}:${tab.kind}`);
+		}
+		return parts.join('|');
 	}
 }
 

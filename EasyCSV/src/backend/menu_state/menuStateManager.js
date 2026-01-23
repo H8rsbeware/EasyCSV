@@ -77,8 +77,8 @@ class MenuState {
                 if(Object.hasOwn(us_file_obj, key)){
                     menu_def["shortcut"] = us_file_obj[key] 
                 }
-                else if(Object.hasOwn(sds_file_obj)){
-                    menu_def["shortcut"] = us_file_obj[key]
+                else if(Object.hasOwn(sds_file_obj, key)){
+                    menu_def["shortcut"] = sds_file_obj[key]
                 }
             })
         });

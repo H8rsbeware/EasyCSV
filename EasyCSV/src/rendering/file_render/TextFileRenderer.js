@@ -5,6 +5,7 @@ class TextFileRenderer extends FileRenderBase {
 		super();
 		this.editorState = editorState;
 		this.fileCache = fileCache;
+		this.activeEditor = null;
 	}
 
 	renderViewer(container, text) {
@@ -136,35 +137,23 @@ class TextFileRenderer extends FileRenderBase {
 		});
 
 		saveBtn.addEventListener('click', async () => {
-			const res = await window.docApi.save(
-				filePath,
-				state.text,
-				state.mtimeMs
-			);
-			if (res?.ok) {
-				state.mtimeMs = res.newMtimeMs;
-				state.dirty = false;
-				this.editorState.set(filePath, state);
-				status.textContent = 'Saved';
-				saveBtn.disabled = true;
-				this.fileCache.set(filePath, {
-					text: state.text,
-					mtimeMs: state.mtimeMs,
-				});
-				this.notifyDirtyState(filePath, false);
-				return;
-			}
-			if (res?.conflict) {
-				status.textContent = 'Conflict: file changed on disk';
-				return;
-			}
-			status.textContent = 'Save failed';
+			await this.saveFile(filePath, textarea.value, {
+				status,
+				saveBtn,
+			});
 		});
 
 		syncGutter();
 		this.notifyDirtyState(filePath, state.dirty);
 		// Focus editor so menu edit commands (cut/copy/paste/undo/redo) target it.
 		requestAnimationFrame(() => textarea.focus());
+
+		this.activeEditor = {
+			filePath,
+			textarea,
+			status,
+			saveBtn,
+		};
 	}
 
 	notifyDirtyState(filePath, dirty) {
@@ -175,6 +164,65 @@ class TextFileRenderer extends FileRenderBase {
 			filePath,
 			dirty: dirty === true,
 		});
+	}
+
+	async saveActiveFile() {
+		if (!this.activeEditor?.filePath) return { ok: false };
+		return await this.saveFile(
+			this.activeEditor.filePath,
+			this.activeEditor.textarea?.value ?? '',
+			this.activeEditor
+		);
+	}
+
+	async saveFile(filePath, text, ui = {}) {
+		const state =
+			this.editorState.get(filePath) || {
+				text: '',
+				mtimeMs: null,
+				dirty: false,
+			};
+
+		const currentText = text ?? '';
+		state.text = currentText;
+		this.editorState.set(filePath, state);
+
+		let res;
+		try {
+			res = await window.docApi.save(
+				filePath,
+				currentText,
+				state.mtimeMs
+			);
+		} catch (err) {
+			res = { ok: false, reason: err?.message || String(err) };
+		}
+
+		if (res?.ok) {
+			state.mtimeMs = res.newMtimeMs;
+			state.dirty = false;
+			this.editorState.set(filePath, state);
+			if (ui.status) ui.status.textContent = 'Saved';
+			if (ui.saveBtn) ui.saveBtn.disabled = true;
+			this.fileCache.set(filePath, {
+				text: state.text,
+				mtimeMs: state.mtimeMs,
+			});
+			this.notifyDirtyState(filePath, false);
+			return res;
+		}
+
+		if (ui.status) {
+			if (res?.conflict) {
+				ui.status.textContent = 'Conflict: file changed on disk';
+			} else if (res?.reason) {
+				ui.status.textContent = `Save failed: ${res.reason}`;
+			} else {
+				ui.status.textContent = 'Save failed';
+			}
+		}
+
+		return res ?? { ok: false };
 	}
 }
 
