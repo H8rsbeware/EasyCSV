@@ -40,7 +40,7 @@ function rememberRecentProject(rootPath) {
 
 async function openProjectFromDialog(win) {
 	const res = await dialog.showOpenDialog(win, {
-		title: 'Open Project',
+		title: 'Open Folder',
 		properties: ['openDirectory'],
 	});
 
@@ -61,6 +61,28 @@ async function openProjectFromDialog(win) {
 	win.webContents.send('layout:updated', layoutState.get().toJSON());
 
 	return { ok: true, path };
+}
+
+async function openFileFromDialog(win) {
+	const res = await dialog.showOpenDialog(win, {
+		title: 'Open File',
+		properties: ['openFile'],
+	});
+
+	if (res.canceled || !res.filePaths?.length) {
+		return { ok: false };
+	}
+
+	const filePath = res.filePaths[0];
+
+	layoutState.ApplyLayoutCommand({
+		type: 'tab.openFile',
+		filePath,
+	});
+
+	win.webContents.send('layout:updated', layoutState.get().toJSON());
+
+	return { ok: true, path: filePath };
 }
 
 function createWindow() {
@@ -146,12 +168,41 @@ ipcMain.on('menu:command', async (event, command) => {
 
 	ipc_on.handleMenuCommand(command, app, win, {
 		onFileCommand: async (cmd, targetWin) => {
-			if (cmd === 'file.open' || cmd === 'file.newProject') {
+			if (cmd === 'file.open') {
+				await openFileFromDialog(targetWin);
+				return;
+			}
+			if (cmd === 'file.newProject') {
 				await openProjectFromDialog(targetWin);
+				return;
+			}
+			if (cmd === 'file.newFile') {
+				layoutState.ApplyLayoutCommand({ type: 'tab.newFile' });
+				targetWin.webContents.send(
+					'layout:updated',
+					layoutState.get().toJSON()
+				);
 				return;
 			}
 			if (cmd === 'file.save') {
 				targetWin.webContents.send('file:save');
+				return;
+			}
+			if (cmd === 'file.saveAs') {
+				targetWin.webContents.send('file:saveAs');
+				return;
+			}
+			if (cmd === 'file.closeTab') {
+				const activeId = layoutState.get().activeTabId;
+				if (!activeId) return;
+				layoutState.ApplyLayoutCommand({
+					type: 'tab.close',
+					id: activeId,
+				});
+				targetWin.webContents.send(
+					'layout:updated',
+					layoutState.get().toJSON()
+				);
 				return;
 			}
 			console.warn('Unhandled file command:', cmd);
@@ -184,8 +235,26 @@ ipcMain.handle('doc:openDialog', async (event) => {
 	return { ok: true, path: res.filePaths[0] };
 });
 
+ipcMain.handle('doc:saveDialog', async (event, { defaultPath } = {}) => {
+	const win = BrowserWindow.fromWebContents(event.sender);
+	const res = await dialog.showSaveDialog(win, {
+		title: 'Save As',
+		defaultPath: defaultPath || undefined,
+	});
+
+	if (res.canceled || !res.filePath) {
+		return { ok: false };
+	}
+
+	return { ok: true, path: res.filePath };
+});
+
 ipcMain.handle('doc:save', async (_e, { filePath, text, expectedMtimeMs }) => {
 	return await documentManager.save(filePath, text, expectedMtimeMs);
+});
+
+ipcMain.handle('doc:saveAs', async (_e, { filePath, text }) => {
+	return await documentManager.saveAs(filePath, text);
 });
 
 ipcMain.handle('project:openDialog', async (event) => {

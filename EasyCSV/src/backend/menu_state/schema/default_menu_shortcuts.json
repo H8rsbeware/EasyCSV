@@ -1,13 +1,17 @@
 {
-    "file.newProject": "Ctrl+N",
+    "file.newFile": "Ctrl+N",
     "file.open": "Ctrl+O",
+    "file.newProject": "Ctrl+Shift+O",
     "file.save": "Ctrl+S",
+    "file.saveAs": "Ctrl+Shift+S",
+    "file.closeTab": "Ctrl+W",
     "app.exit": "Ctrl+Shift+F10",
     "edit.undo": "Ctrl+Z",
     "edit.redo": "Ctrl+Y",
     "edit.cut": "Ctrl+X",
     "edit.copy": "Ctrl+C",
     "edit.paste": "Ctrl+V",
+    "edit.selectAll": "Ctrl+A",
     "view.toggleDevTools": "F12",
     "view.reload": "Ctrl+R",
     "tools.settings": "Ctrl+P"

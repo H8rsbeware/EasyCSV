@@ -3,16 +3,31 @@
         "label": "File",
         "items": [
             {
-                "label": "New Project...",
+                "label": "New File",
+                "command": "file.newFile"
+            },
+            {
+                "label": "Open File...",
+                "command": "file.open"
+            },
+            {
+                "label": "Open Folder...",
                 "command": "file.newProject"
             },
             {
-                "label": "Open...",
-                "command": "file.open"
+                "type": "separator"
             },
             {
                 "label": "Save",
                 "command": "file.save"
+            },
+            {
+                "label": "Save As...",
+                "command": "file.saveAs"
+            },
+            {
+                "label": "Close Tab",
+                "command": "file.closeTab"
             },
             {
                 "type": "separator"
@@ -48,6 +63,13 @@
             {
                 "label": "Paste",
                 "command": "edit.paste"
+            },
+            {
+                "type": "separator"
+            },
+            {
+                "label": "Select All",
+                "command": "edit.selectAll"
             }
         ]
     },

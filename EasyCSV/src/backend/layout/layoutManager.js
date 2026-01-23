@@ -134,6 +134,37 @@ class LayoutManager {
 				break;
 			}
 
+			case 'tab.saveAs': {
+				const filePath = cmd.filePath;
+				if (typeof filePath !== 'string' || !filePath.trim()) break;
+
+				const targetId = cmd.id || activeTabId;
+				const index = tabs.findIndex((t) => t.id === targetId);
+				if (index === -1) break;
+
+				const existing = tabs.find(
+					(t) => t.kind === 'file' && t.filePath === filePath
+				);
+				if (existing && existing.id !== targetId) {
+					tabs.splice(index, 1);
+					activeTabId = existing.id;
+					break;
+				}
+
+				const id = `file:${filePath}`;
+				const title = path.basename(filePath);
+				const current = tabs[index];
+				tabs[index] = new TabBlueprint({
+					...current.toJSON(),
+					id,
+					title,
+					filePath,
+					dirty: false,
+				});
+				activeTabId = id;
+				break;
+			}
+
 			case 'tab.newFile': {
 				const nextIndex = this.__nextUntitledIndex(tabs);
 				const title = `Untitled-${nextIndex}`;

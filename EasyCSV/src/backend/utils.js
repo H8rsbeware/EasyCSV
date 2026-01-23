@@ -12,12 +12,17 @@ function unpackSettings(app) {
         throw new ReferenceError(`Cannot find settings file: ${settingsPath}`);
 
     const data = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
+    const settingsDir = path.dirname(settingsPath);
 
     const settings = {};
     const __options = [];
 
     Object.entries(data).forEach(([k, v]) => {
-        settings[k] = () => v;
+        let value = v;
+        if (typeof value === "string" && !path.isAbsolute(value)) {
+            value = path.resolve(settingsDir, value);
+        }
+        settings[k] = () => value;
         __options.push(k);
     });
 

@@ -38,12 +38,20 @@ contextBridge.exposeInMainWorld('docApi', {
 	save: (filePath, text, expectedMtimeMs) =>
 		ipcRenderer.invoke('doc:save', { filePath, text, expectedMtimeMs }),
 	openDialog: () => ipcRenderer.invoke('doc:openDialog'),
+	saveDialog: (defaultPath) =>
+		ipcRenderer.invoke('doc:saveDialog', { defaultPath }),
+	saveAs: (filePath, text) =>
+		ipcRenderer.invoke('doc:saveAs', { filePath, text }),
 });
 
 contextBridge.exposeInMainWorld('fileApi', {
 	onSave: (handler) => {
 		if (typeof handler !== 'function') return;
 		ipcRenderer.on('file:save', () => handler());
+	},
+	onSaveAs: (handler) => {
+		if (typeof handler !== 'function') return;
+		ipcRenderer.on('file:saveAs', () => handler());
 	},
 });
 

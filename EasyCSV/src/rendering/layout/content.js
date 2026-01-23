@@ -110,10 +110,34 @@ class ContentView {
 			(t) => t.id === this.currentLayout.activeTabId
 		);
 		if (!activeTab || activeTab.kind !== 'file') return;
-		if (!activeTab.filePath) return;
+		if (!activeTab.filePath) {
+			await this.saveActiveAs();
+			return;
+		}
 
 		const res = await this.textRenderer.saveActiveFile();
 		if (!res || res.ok !== false) return;
+	}
+
+	async saveActiveAs() {
+		if (!this.currentLayout) return;
+
+		const activeTab = this.currentLayout.tabs.find(
+			(t) => t.id === this.currentLayout.activeTabId
+		);
+		if (!activeTab || activeTab.kind !== 'file') return;
+
+		const pick = await window.docApi?.saveDialog?.(activeTab.filePath);
+		if (!pick?.ok || !pick.path) return;
+
+		const res = await this.textRenderer.saveActiveFileAs(pick.path);
+		if (!res?.ok) return;
+
+		window.layoutApi.sendCommand({
+			type: 'tab.saveAs',
+			id: activeTab.id,
+			filePath: pick.path,
+		});
 	}
 
 	renderFile(tab) {

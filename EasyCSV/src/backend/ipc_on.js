@@ -106,6 +106,9 @@ const handleEditCommand = (command, win) => {
     case "edit.paste":
       wc.paste();
       break;
+    case "edit.selectAll":
+      wc.selectAll();
+      break;
     default:
       console.warn("Unhandled edit command:", command);
   }

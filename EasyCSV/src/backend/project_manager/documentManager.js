@@ -28,6 +28,19 @@ class DocumentManager {
 		const st2 = await fs.stat(filePath);
 		return { ok: true, newMtimeMs: st2.mtimeMs };
 	}
+
+	async saveAs(filePath, text) {
+		if (typeof filePath !== 'string' || !filePath.trim()) {
+			throw new TypeError('Invalid file path');
+		}
+
+		await fs.writeFile(filePath, text ?? '', 'utf8');
+
+		const st = await fs.stat(filePath);
+		if (!st.isFile()) throw new TypeError('Not a file');
+
+		return { ok: true, newMtimeMs: st.mtimeMs };
+	}
 }
 
 module.exports = { DocumentManager };

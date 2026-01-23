@@ -21,6 +21,9 @@ if (document.readyState === 'loading') {
 		window.fileApi?.onSave(() => {
 			contentView?.saveActive?.();
 		});
+		window.fileApi?.onSaveAs(() => {
+			contentView?.saveActiveAs?.();
+		});
 	});
 } else {
 	(async () => {
@@ -29,6 +32,9 @@ if (document.readyState === 'loading') {
 		});
 		window.fileApi?.onSave(() => {
 			contentView?.saveActive?.();
+		});
+		window.fileApi?.onSaveAs(() => {
+			contentView?.saveActiveAs?.();
 		});
 	})();
 }

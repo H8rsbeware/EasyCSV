@@ -104,15 +104,40 @@ class TextFileRenderer extends FileRenderBase {
 		container.appendChild(editor);
 		container.appendChild(footer);
 
-		const syncGutter = () => {
-			const lines = textarea.value.split(/\r?\n/).length;
+		const countLines = (value) => {
+			if (!value) return 1;
+			let count = 1;
+			for (let i = 0; i < value.length; i += 1) {
+				if (value.charCodeAt(i) === 10) count += 1;
+			}
+			return count;
+		};
+
+		const renderGutter = (lines) => {
 			gutter.innerHTML = '';
+			const frag = document.createDocumentFragment();
 			for (let i = 1; i <= lines; i += 1) {
 				const ln = document.createElement('div');
 				ln.className = 'text-editor__line-no';
 				ln.textContent = String(i);
-				gutter.appendChild(ln);
+				frag.appendChild(ln);
 			}
+			gutter.appendChild(frag);
+		};
+
+		let lastLineCount = countLines(textarea.value);
+		let pendingGutterTimer = null;
+
+		const scheduleGutterSync = () => {
+			if (pendingGutterTimer) return;
+			pendingGutterTimer = setTimeout(() => {
+				pendingGutterTimer = null;
+				const nextCount = countLines(textarea.value);
+				if (nextCount !== lastLineCount) {
+					lastLineCount = nextCount;
+					renderGutter(nextCount);
+				}
+			}, 80);
 		};
 
 		const markDirty = () => {
@@ -128,7 +153,7 @@ class TextFileRenderer extends FileRenderBase {
 		};
 
 		textarea.addEventListener('input', () => {
-			syncGutter();
+			scheduleGutterSync();
 			markDirty();
 		});
 
@@ -143,7 +168,7 @@ class TextFileRenderer extends FileRenderBase {
 			});
 		});
 
-		syncGutter();
+		renderGutter(lastLineCount);
 		this.notifyDirtyState(filePath, state.dirty);
 		// Focus editor so menu edit commands (cut/copy/paste/undo/redo) target it.
 		requestAnimationFrame(() => textarea.focus());
@@ -171,6 +196,16 @@ class TextFileRenderer extends FileRenderBase {
 		return await this.saveFile(
 			this.activeEditor.filePath,
 			this.activeEditor.textarea?.value ?? '',
+			this.activeEditor
+		);
+	}
+
+	async saveActiveFileAs(newPath) {
+		if (!this.activeEditor?.textarea) return { ok: false };
+		return await this.saveFileAs(
+			newPath,
+			this.activeEditor.textarea?.value ?? '',
+			this.activeEditor.filePath,
 			this.activeEditor
 		);
 	}
@@ -216,6 +251,60 @@ class TextFileRenderer extends FileRenderBase {
 			if (res?.conflict) {
 				ui.status.textContent = 'Conflict: file changed on disk';
 			} else if (res?.reason) {
+				ui.status.textContent = `Save failed: ${res.reason}`;
+			} else {
+				ui.status.textContent = 'Save failed';
+			}
+		}
+
+		return res ?? { ok: false };
+	}
+
+	async saveFileAs(newPath, text, fromPath, ui = {}) {
+		const currentText = text ?? '';
+
+		let res;
+		try {
+			res = await window.docApi.saveAs(newPath, currentText);
+		} catch (err) {
+			res = { ok: false, reason: err?.message || String(err) };
+		}
+
+		if (res?.ok) {
+			const nextState = {
+				text: currentText,
+				mtimeMs: res.newMtimeMs ?? null,
+				dirty: false,
+			};
+
+			this.editorState.set(newPath, nextState);
+			this.fileCache.set(newPath, {
+				text: nextState.text,
+				mtimeMs: nextState.mtimeMs,
+			});
+
+			if (fromPath && fromPath !== newPath) {
+				this.editorState.delete(fromPath);
+				this.fileCache.delete(fromPath);
+			}
+
+			if (ui.status) ui.status.textContent = 'Saved';
+			if (ui.saveBtn) ui.saveBtn.disabled = true;
+
+			if (this.activeEditor) {
+				this.activeEditor.filePath = newPath;
+			}
+
+			this.notifyDirtyState(newPath, false);
+			if (fromPath && fromPath !== newPath) {
+				this.notifyDirtyState(fromPath, false);
+			}
+
+			return res;
+		}
+
+		if (ui.status) {
+			if (res?.reason) {
 				ui.status.textContent = `Save failed: ${res.reason}`;
 			} else {
 				ui.status.textContent = 'Save failed';
