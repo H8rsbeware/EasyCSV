@@ -6,6 +6,7 @@ const {
 	dialog,
 } = require('electron');
 const path = require('node:path');
+const fs = require('node:fs');
 
 const pm = require('./backend/project_manager/projectManager.js');
 
@@ -23,6 +24,7 @@ let menuState;
 let layoutState;
 let projectManager;
 let documentManager;
+let defaultUserSettings = null;
 
 function rememberRecentProject(rootPath) {
 	const existing = usersState.GetState('recently_opened') || [];
@@ -122,6 +124,9 @@ app.whenReady().then(() => {
 	createWindow();
 
 	settings = utils.unpackSettings(app);
+	defaultUserSettings = JSON.parse(
+		fs.readFileSync(settings.UserStateDefaultPath(), 'utf8')
+	);
 	usersState = new usm.UserState(settings);
 	menuState = new msm.MenuState(settings);
 	layoutState = new lym.LayoutManager(usersState);
@@ -215,6 +220,12 @@ ipcMain.on('menu:command', async (event, command) => {
 
 ipcMain.handle('user:getRecentProjects', () => {
 	return usersState.GetState('recently_opened') || [];
+});
+
+ipcMain.handle('user:getCsvSettings', () => {
+	const stored = usersState.GetState('preferences.csv');
+	if (stored) return stored;
+	return defaultUserSettings?.preferences?.csv || {};
 });
 
 ipcMain.handle('doc:open', async (_e, { filePath }) => {

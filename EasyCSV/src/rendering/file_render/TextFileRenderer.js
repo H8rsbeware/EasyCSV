@@ -1,11 +1,19 @@
 import { FileRenderBase } from './FileRenderBase.js';
+import { TextTokenStyler } from './TextTokenStyler.js';
 
 class TextFileRenderer extends FileRenderBase {
-	constructor({ editorState, fileCache }) {
+	constructor({ editorState, fileCache, tokenStyler, onTextChange } = {}) {
 		super();
 		this.editorState = editorState;
 		this.fileCache = fileCache;
 		this.activeEditor = null;
+		this.tokenStyler = tokenStyler || new TextTokenStyler();
+		this.onTextChange = onTextChange || null;
+	}
+
+	getTokenClass(token) {
+		if (this.tokenStyler?.getClass) return this.tokenStyler.getClass(token);
+		return `tok-${token.type}`;
 	}
 
 	renderViewer(container, text) {
@@ -37,7 +45,7 @@ class TextFileRenderer extends FileRenderBase {
 					lineBody.appendChild(document.createTextNode(t.value));
 				} else {
 					const span = document.createElement('span');
-					span.className = `tok-${t.type}`;
+					span.className = this.getTokenClass(t);
 					span.textContent = t.value;
 					lineBody.appendChild(span);
 				}
@@ -79,10 +87,19 @@ class TextFileRenderer extends FileRenderBase {
 		const gutter = document.createElement('div');
 		gutter.className = 'text-editor__gutter';
 
+		const surface = document.createElement('div');
+		surface.className = 'text-editor__surface';
+
+		const highlight = document.createElement('pre');
+		highlight.className = 'text-editor__highlight';
+
 		const textarea = document.createElement('textarea');
 		textarea.className = 'text-editor__ta';
 		textarea.spellcheck = false;
 		textarea.value = state.text;
+
+		surface.appendChild(highlight);
+		surface.appendChild(textarea);
 
 		const footer = document.createElement('div');
 		footer.className = 'text-editor__footer';
@@ -100,7 +117,7 @@ class TextFileRenderer extends FileRenderBase {
 		footer.appendChild(saveBtn);
 
 		editor.appendChild(gutter);
-		editor.appendChild(textarea);
+		editor.appendChild(surface);
 		container.appendChild(editor);
 		container.appendChild(footer);
 
@@ -125,8 +142,32 @@ class TextFileRenderer extends FileRenderBase {
 			gutter.appendChild(frag);
 		};
 
+		const renderHighlight = (value) => {
+			highlight.innerHTML = '';
+			const lines = value.split(/\r?\n/);
+			const frag = document.createDocumentFragment();
+			lines.forEach((line, index) => {
+				if (index > 0) {
+					frag.appendChild(document.createTextNode('\n'));
+				}
+				const tokens = this.tokenizeLine(line);
+				for (const token of tokens) {
+					if (token.type === 'plain') {
+						frag.appendChild(document.createTextNode(token.value));
+					} else {
+						const span = document.createElement('span');
+						span.className = this.getTokenClass(token);
+						span.textContent = token.value;
+						frag.appendChild(span);
+					}
+				}
+			});
+			highlight.appendChild(frag);
+		};
+
 		let lastLineCount = countLines(textarea.value);
 		let pendingGutterTimer = null;
+		let pendingHighlightTimer = null;
 
 		const scheduleGutterSync = () => {
 			if (pendingGutterTimer) return;
@@ -140,6 +181,14 @@ class TextFileRenderer extends FileRenderBase {
 			}, 80);
 		};
 
+		const scheduleHighlightSync = () => {
+			if (pendingHighlightTimer) return;
+			pendingHighlightTimer = setTimeout(() => {
+				pendingHighlightTimer = null;
+				renderHighlight(textarea.value);
+			}, 60);
+		};
+
 		const markDirty = () => {
 			state.text = textarea.value;
 			const wasDirty = state.dirty;
@@ -150,15 +199,19 @@ class TextFileRenderer extends FileRenderBase {
 				saveBtn.disabled = false;
 				this.notifyDirtyState(filePath, true);
 			}
+			this.emitTextChange(filePath, state.text);
 		};
 
 		textarea.addEventListener('input', () => {
 			scheduleGutterSync();
+			scheduleHighlightSync();
 			markDirty();
 		});
 
 		textarea.addEventListener('scroll', () => {
 			gutter.scrollTop = textarea.scrollTop;
+			highlight.scrollTop = textarea.scrollTop;
+			highlight.scrollLeft = textarea.scrollLeft;
 		});
 
 		saveBtn.addEventListener('click', async () => {
@@ -169,15 +222,53 @@ class TextFileRenderer extends FileRenderBase {
 		});
 
 		renderGutter(lastLineCount);
+		renderHighlight(textarea.value);
 		this.notifyDirtyState(filePath, state.dirty);
 		// Focus editor so menu edit commands (cut/copy/paste/undo/redo) target it.
 		requestAnimationFrame(() => textarea.focus());
+
+		const updateText = (nextValue, options = {}) => {
+			const value = nextValue ?? '';
+			const preserveCursor = options.preserveCursor === true;
+			const selection = preserveCursor
+				? {
+						start: textarea.selectionStart,
+						end: textarea.selectionEnd,
+					}
+				: null;
+
+			textarea.value = value;
+			state.text = value;
+			if (options.markDirty === true) {
+				state.dirty = true;
+				status.textContent = 'Unsaved changes';
+				saveBtn.disabled = false;
+				this.notifyDirtyState(filePath, true);
+			}
+			this.editorState.set(filePath, state);
+
+			lastLineCount = countLines(textarea.value);
+			renderGutter(lastLineCount);
+			renderHighlight(textarea.value);
+
+			if (selection) {
+				textarea.selectionStart = Math.min(
+					selection.start,
+					textarea.value.length
+				);
+				textarea.selectionEnd = Math.min(
+					selection.end,
+					textarea.value.length
+				);
+			}
+		};
 
 		this.activeEditor = {
 			filePath,
 			textarea,
 			status,
 			saveBtn,
+			updateText,
 		};
 	}
 
@@ -208,6 +299,38 @@ class TextFileRenderer extends FileRenderBase {
 			this.activeEditor.filePath,
 			this.activeEditor
 		);
+	}
+
+	clearActiveEditor() {
+		this.activeEditor = null;
+	}
+
+	hasActiveEditor() {
+		return Boolean(this.activeEditor?.textarea);
+	}
+
+	emitTextChange(filePath, text) {
+		if (typeof this.onTextChange !== 'function') return;
+		this.onTextChange({ filePath, text });
+	}
+
+	setEditorText(filePath, text, options = {}) {
+		const state =
+			this.editorState.get(filePath) || {
+				text: '',
+				mtimeMs: null,
+				dirty: false,
+			};
+
+		state.text = text ?? '';
+		if (options.markDirty === true) {
+			state.dirty = true;
+		}
+		this.editorState.set(filePath, state);
+
+		if (this.activeEditor?.filePath === filePath) {
+			this.activeEditor.updateText(state.text, options);
+		}
 	}
 
 	async saveFile(filePath, text, ui = {}) {

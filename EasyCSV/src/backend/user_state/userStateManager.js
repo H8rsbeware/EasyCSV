@@ -15,6 +15,7 @@ class UserState {
         this.statePath = settings.UserStatePath();
         this.defaultPath = settings.UserStateDefaultPath();
         this.stateDefinition = this.GetStateDefinition(this.defaultPath);
+        this.defaultState = JSON.parse(fs.readFileSync(this.defaultPath, "utf8"));
 
         const userStateInit = this.CheckUserStateExists();
         if (!userStateInit) {
@@ -24,6 +25,10 @@ class UserState {
         }
 
         this.state = JSON.parse(fs.readFileSync(this.statePath, "utf8"));
+        const merged = this.MergeDefaults(this.state, this.defaultState);
+        if (merged) {
+            this.SaveState();
+        }
     }
 
     CheckUserStateExists() {
@@ -135,6 +140,35 @@ class UserState {
 
     SaveState() {
         fs.writeFileSync(this.statePath, JSON.stringify(this.state, null, 2), "utf8");
+    }
+
+    MergeDefaults(target, defaults) {
+        if (!defaults || typeof defaults !== "object") return false;
+        let changed = false;
+
+        Object.entries(defaults).forEach(([key, value]) => {
+            if (!(key in target)) {
+                target[key] = Array.isArray(value) ? [...value] : value;
+                changed = true;
+                return;
+            }
+
+            const current = target[key];
+            if (
+                value &&
+                typeof value === "object" &&
+                !Array.isArray(value) &&
+                current &&
+                typeof current === "object" &&
+                !Array.isArray(current)
+            ) {
+                if (this.MergeDefaults(current, value)) {
+                    changed = true;
+                }
+            }
+        });
+
+        return changed;
     }
 }
 

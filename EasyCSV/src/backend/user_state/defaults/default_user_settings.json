@@ -1,7 +1,22 @@
 {
     "preferences": {
         "theme": "dark",
-        "font": "Aptos"
+        "font": "Aptos",
+        "csv": {
+            "defaultMode": "table",
+            "maxRows": 1000,
+            "maxCols": 200,
+            "maxSourceLines": 2000,
+            "rowHeight": 22,
+            "minRowHeight": 18,
+            "colWidth": 220,
+            "minColWidth": 80,
+            "rowNumWidth": 28,
+            "headerHeight": 28,
+            "hasHeader": true,
+            "tabSize": 4,
+            "typeHighlighting": false
+        }
     },
     "recently_opened": [
         {

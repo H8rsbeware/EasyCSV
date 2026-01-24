@@ -2,6 +2,7 @@
 import { cloneTemplate, wireActions } from '../ui/templates.js';
 import { TextFileRenderer } from '../file_render/TextFileRenderer.js';
 import { CsvFileRenderer } from '../file_render/CsvFileRenderer.js';
+import { CsvTextRenderer } from '../file_render/CsvTextRenderer.js';
 
 class ContentView {
 	constructor(rootEl) {
@@ -16,7 +17,15 @@ class ContentView {
 			editorState: this.editorState,
 			fileCache: this.fileCache,
 		});
-		this.csvRenderer = new CsvFileRenderer();
+		this.csvRenderer = new CsvFileRenderer({ fileCache: this.fileCache });
+		this.csvTextRenderer = new CsvTextRenderer({
+			editorState: this.editorState,
+			fileCache: this.fileCache,
+			onTextChange: ({ filePath, text, delimiter }) => {
+				this.csvRenderer.syncFromSourceEdit(filePath, text, delimiter);
+			},
+		});
+		this.csvSettings = null;
 		// In-flight reads are deduped so a fast re-render doesn't double-hit IPC.
 		this.inflight = new Map(); // filePath -> Promise
 		// Protects against out-of-order async renders after tab switches.
@@ -115,7 +124,21 @@ class ContentView {
 			return;
 		}
 
-		const res = await this.textRenderer.saveActiveFile();
+		const ext = this.getExtension(activeTab.filePath);
+		let res;
+		if (ext === 'csv' || ext === 'tsv') {
+			if (this.csvTextRenderer.hasActiveEditor()) {
+				res = await this.csvTextRenderer.saveActiveFile();
+			} else {
+				const delimiter = ext === 'tsv' ? '\t' : ',';
+				res = await this.csvRenderer.saveTableEdits(
+					activeTab.filePath,
+					delimiter
+				);
+			}
+		} else {
+			res = await this.textRenderer.saveActiveFile();
+		}
 		if (!res || res.ok !== false) return;
 	}
 
@@ -130,7 +153,22 @@ class ContentView {
 		const pick = await window.docApi?.saveDialog?.(activeTab.filePath);
 		if (!pick?.ok || !pick.path) return;
 
-		const res = await this.textRenderer.saveActiveFileAs(pick.path);
+		const ext = this.getExtension(activeTab.filePath);
+		let res;
+		if (ext === 'csv' || ext === 'tsv') {
+			if (this.csvTextRenderer.hasActiveEditor()) {
+				res = await this.csvTextRenderer.saveActiveFileAs(pick.path);
+			} else {
+				const delimiter = ext === 'tsv' ? '\t' : ',';
+				res = await this.csvRenderer.saveTableEditsAs(
+					activeTab.filePath,
+					pick.path,
+					delimiter
+				);
+			}
+		} else {
+			res = await this.textRenderer.saveActiveFileAs(pick.path);
+		}
 		if (!res?.ok) return;
 
 		window.layoutApi.sendCommand({
@@ -195,7 +233,26 @@ class ContentView {
 
 		if (ext === 'csv' || ext === 'tsv') {
 			const delimiter = ext === 'tsv' ? '\t' : ',';
-			this.csvRenderer.render(body, text, delimiter);
+			if (!this.csvSettings && window?.userApi?.getCsvSettings) {
+				try {
+					this.csvSettings = await window.userApi.getCsvSettings();
+				} catch (err) {
+					this.csvSettings = null;
+				}
+			}
+			this.textRenderer.clearActiveEditor();
+			this.csvTextRenderer.setDelimiter(delimiter);
+			this.csvRenderer.render(
+				body,
+				text,
+				delimiter,
+				filePath,
+				this.csvSettings || {},
+				{
+					csvTextRenderer: this.csvTextRenderer,
+					fileResult: result,
+				}
+			);
 			return;
 		}
 
