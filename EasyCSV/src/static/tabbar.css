@@ -43,13 +43,15 @@
 .tab__close {
 	border: none;
 	background: transparent;
-	width: 16px;
-	height: 16px;
 	padding: 0;
 	font-size: 11px;
 	cursor: pointer;
 	opacity: 0.6;
 	color: var(--secondary-font-color);
+	text-align: center;
+	line-height: 16px;
+	margin-bottom: 5px;
+	padding: 2px 5px !important;
 }
 
 .tab__close:hover {

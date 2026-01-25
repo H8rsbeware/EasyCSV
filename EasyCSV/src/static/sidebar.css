@@ -8,7 +8,7 @@
 
 	border-right: 1px solid var(--hr-subtle);
 	background: var(--deep-bg);
-	font-family: 'EasyMono', monospace;
+	font-family: var(--font-sidebar);
 	padding: 0;
 	--sidebar-header-height: var(--tabbar-height);
 	--tree-indent: 14px;
@@ -34,7 +34,7 @@
 	padding: 0 10px;
 	border-bottom: 1px solid var(--hr-subtle);
 	background: var(--deep-bg);
-	font-family: 'EasySans', sans-serif;
+	font-family: var(--font-sidebar);
 }
 
 .sidebar__title {

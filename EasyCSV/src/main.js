@@ -25,6 +25,7 @@ let layoutState;
 let projectManager;
 let documentManager;
 let defaultUserSettings = null;
+let settingsSchema = null;
 
 function rememberRecentProject(rootPath) {
 	const existing = usersState.GetState('recently_opened') || [];
@@ -127,6 +128,17 @@ app.whenReady().then(() => {
 	defaultUserSettings = JSON.parse(
 		fs.readFileSync(settings.UserStateDefaultPath(), 'utf8')
 	);
+	try {
+		settingsSchema = JSON.parse(
+			fs.readFileSync(
+				path.join(__dirname, 'backend', 'user_state', 'settings_schema.json'),
+				'utf8'
+			)
+		);
+	} catch (err) {
+		console.warn('Failed to load settings schema:', err);
+		settingsSchema = { sections: [] };
+	}
 	usersState = new usm.UserState(settings);
 	menuState = new msm.MenuState(settings);
 	layoutState = new lym.LayoutManager(usersState);
@@ -212,7 +224,15 @@ ipcMain.on('menu:command', async (event, command) => {
 			}
 			console.warn('Unhandled file command:', cmd);
 		},
-		onToolsCommand: (cmd) => {
+		onToolsCommand: (cmd, targetWin) => {
+			if (cmd === 'tools.settings') {
+				layoutState.ApplyLayoutCommand({ type: 'tab.openSettings' });
+				targetWin.webContents.send(
+					'layout:updated',
+					layoutState.get().toJSON()
+				);
+				return;
+			}
 			console.warn('Unhandled tools command:', cmd);
 		},
 	});
@@ -226,6 +246,38 @@ ipcMain.handle('user:getCsvSettings', () => {
 	const stored = usersState.GetState('preferences.csv');
 	if (stored) return stored;
 	return defaultUserSettings?.preferences?.csv || {};
+});
+
+ipcMain.handle('user:setCsvSettings', (_event, payload = {}) => {
+	const next = payload?.settings || {};
+	const current = usersState.GetState('preferences.csv') || {};
+	const merged = { ...current, ...next };
+	usersState.SetState('preferences.csv', merged);
+	usersState.SaveState();
+	return merged;
+});
+
+ipcMain.handle('user:getSettingsSchema', () => {
+	return settingsSchema || { sections: [] };
+});
+
+ipcMain.handle('user:getSettings', () => {
+	return usersState?.state || {};
+});
+
+ipcMain.handle('user:setSetting', (_event, payload = {}) => {
+	const keyPath = payload?.path;
+	if (typeof keyPath !== 'string' || !keyPath.trim()) {
+		return { ok: false, reason: 'Invalid setting path.' };
+	}
+
+	const ok = usersState.SetState(keyPath, payload?.value);
+	if (!ok) {
+		return { ok: false, reason: 'Unknown setting path.' };
+	}
+
+	usersState.SaveState();
+	return { ok: true, value: usersState.GetState(keyPath) };
 });
 
 ipcMain.handle('doc:open', async (_e, { filePath }) => {

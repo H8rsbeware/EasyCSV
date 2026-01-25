@@ -58,4 +58,10 @@ contextBridge.exposeInMainWorld('fileApi', {
 contextBridge.exposeInMainWorld('userApi', {
 	getRecentProjects: () => ipcRenderer.invoke('user:getRecentProjects'),
 	getCsvSettings: () => ipcRenderer.invoke('user:getCsvSettings'),
+	setCsvSettings: (settings) =>
+		ipcRenderer.invoke('user:setCsvSettings', { settings }),
+	getSettingsSchema: () => ipcRenderer.invoke('user:getSettingsSchema'),
+	getSettings: () => ipcRenderer.invoke('user:getSettings'),
+	setSetting: (path, value) =>
+		ipcRenderer.invoke('user:setSetting', { path, value }),
 });

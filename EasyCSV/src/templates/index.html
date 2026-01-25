@@ -19,7 +19,7 @@
 	<body>
 		<div id="titlebar">
 			<div class="titlebar-left">
-				<div class="app-icon"></div>
+				<div class="app-icon"><img src="../static/src/ez.svg" /></div>
 				<div class="app-title">EasyCSV</div>
 
 				<div class="menubar" id="menubar">
@@ -37,8 +37,14 @@
 					title="Toggle theme"
 				>
 					<span class="titlebar-theme__thumb" aria-hidden="true">
-						<span class="material-symbols-rounded titlebar-theme__icon titlebar-theme__icon--sun">light_mode</span>
-						<span class="material-symbols-rounded titlebar-theme__icon titlebar-theme__icon--moon">dark_mode</span>
+						<span
+							class="material-symbols-rounded titlebar-theme__icon titlebar-theme__icon--sun"
+							>light_mode</span
+						>
+						<span
+							class="material-symbols-rounded titlebar-theme__icon titlebar-theme__icon--moon"
+							>dark_mode</span
+						>
 					</span>
 				</button>
 
@@ -90,7 +96,7 @@
 		</script>
 	</body>
 
-		<template id="tpl-welcome">
+	<template id="tpl-welcome">
 		<div class="welcome">
 			<div class="welcome__hero">
 				<div class="welcome__title">Welcome to EasyCSV</div>
@@ -129,7 +135,11 @@
 						title="New File"
 						aria-label="New File"
 					>
-						<span class="material-symbols-rounded" aria-hidden="true">note_add</span>
+						<span
+							class="material-symbols-rounded"
+							aria-hidden="true"
+							>note_add</span
+						>
 					</button>
 					<button
 						class="sidebar__icon-btn"
@@ -138,7 +148,11 @@
 						title="Open Folder"
 						aria-label="Open Folder"
 					>
-						<span class="material-symbols-rounded" aria-hidden="true">create_new_folder</span>
+						<span
+							class="material-symbols-rounded"
+							aria-hidden="true"
+							>create_new_folder</span
+						>
 					</button>
 				</div>
 			</div>
@@ -151,7 +165,10 @@
 		<div class="tree-row">
 			<span class="tree-row__lines" aria-hidden="true"></span>
 			<span class="tree-row__arrow"></span>
-			<span class="tree-row__icon material-symbols-rounded" aria-hidden="true"></span>
+			<span
+				class="tree-row__icon material-symbols-rounded"
+				aria-hidden="true"
+			></span>
 			<span class="tree-row__label"></span>
 			<span class="tree-row__dirty" aria-hidden="true"></span>
 		</div>
@@ -169,5 +186,3 @@
 		</div>
 	</template>
 </html>
-
-

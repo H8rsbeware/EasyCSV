@@ -9,6 +9,8 @@ class CsvFileRenderer extends FileRenderBase {
 			maxRows: 1000,
 			maxCols: 200,
 			maxSourceLines: 2000,
+			initialRenderRows: 500,
+			loadBatchRows: 500,
 			rowHeight: 22,
 			minRowHeight: 18,
 			colWidth: 220,
@@ -16,6 +18,7 @@ class CsvFileRenderer extends FileRenderBase {
 			rowNumWidth: 28,
 			headerHeight: 28,
 			hasHeader: true,
+			maxFileBytes: 20000000,
 			tabSize: 4,
 			typeHighlighting: false,
 			...options.settings,
@@ -28,6 +31,16 @@ class CsvFileRenderer extends FileRenderBase {
 		return { ...this.settings, ...overrides };
 	}
 
+	getRowNumWidth(settings, visibleRows) {
+		const shown = Math.max(1, visibleRows || 1);
+		const digits = String(
+			settings.hasHeader ? Math.max(1, shown - 1) : shown
+		).length;
+		const minCh = Math.max(2, Math.ceil((settings.rowNumWidth || 28) / 8));
+		const widthCh = Math.max(minCh, digits + 1);
+		return `${widthCh}ch`;
+	}
+
 	getFileState(filePath, settings) {
 		const key = filePath || '__csv__';
 		if (!this.fileState.has(key)) {
@@ -37,6 +50,16 @@ class CsvFileRenderer extends FileRenderBase {
 					typeof settings.hasHeader === 'boolean'
 						? settings.hasHeader
 						: true,
+				allowLargeLoad: false,
+				renderLimit: Math.min(
+					Math.max(
+						1,
+						settings.initialRenderRows || settings.maxRows || 500
+					),
+					Infinity
+				),
+				scrollTop: 0,
+				scrollLeft: 0,
 				selection: null,
 			});
 		}
@@ -209,16 +232,14 @@ class CsvFileRenderer extends FileRenderBase {
 			root.className = 'csv-view';
 			this.applyViewVars(root, settings);
 
-			const parse = this.parseDelimited(effectiveText, delimiter, {
-				maxRows: settings.maxRows,
-				maxCols: settings.maxCols,
-			});
+			if (typeof state.hasHeader !== 'boolean') {
+				state.hasHeader =
+					typeof settings.hasHeader === 'boolean' ? settings.hasHeader : true;
+			}
 
-			const stats = {
-				totalRows: parse.totalRows,
-				totalCols: parse.maxColumns,
-				visibleRows: Math.min(parse.totalRows, settings.maxRows),
-				visibleCols: Math.min(parse.maxColumns, settings.maxCols),
+			const viewSettings = {
+				...settings,
+				hasHeader: state.hasHeader,
 			};
 
 			const viewHelpers = {
@@ -235,15 +256,125 @@ class CsvFileRenderer extends FileRenderBase {
 				},
 			};
 
-			if (typeof state.hasHeader !== 'boolean') {
-				state.hasHeader =
-					typeof settings.hasHeader === 'boolean' ? settings.hasHeader : true;
+			const isTooLarge =
+				typeof settings.maxFileBytes === 'number' &&
+				helpers?.fileResult?.sizeBytes > settings.maxFileBytes;
+
+			if (isTooLarge && !state.allowLargeLoad) {
+				const stats = {
+					totalRows: 0,
+					totalCols: 0,
+					visibleRows: 0,
+					visibleCols: 0,
+				};
+
+				const toolbar = this.renderToolbar(
+					root,
+					state,
+					stats,
+					viewSettings,
+					filePath,
+					delimiter,
+					viewHelpers,
+					() => {
+						this.render(
+							container,
+							effectiveText,
+							delimiter,
+							filePath,
+							settings,
+							helpers
+						);
+					}
+				);
+
+				const body = document.createElement('div');
+				body.className = 'csv-view__body';
+				if (typeof state.scrollTop === 'number') {
+					body.scrollTop = state.scrollTop;
+				}
+				if (typeof state.scrollLeft === 'number') {
+					body.scrollLeft = state.scrollLeft;
+				}
+				body.addEventListener('scroll', () => {
+					state.scrollTop = body.scrollTop;
+					state.scrollLeft = body.scrollLeft;
+				});
+
+				const blocker = document.createElement('div');
+				blocker.className = 'csv-blocker';
+
+				const title = document.createElement('div');
+				title.className = 'csv-blocker__title';
+				title.textContent = 'Large CSV file';
+
+				const desc = document.createElement('div');
+				desc.className = 'csv-blocker__desc';
+				desc.textContent = `This file is ${helpers.fileResult.sizeBytes.toLocaleString()} bytes. Loading the full table may be slow.`;
+
+				const actions = document.createElement('div');
+				actions.className = 'csv-blocker__actions';
+
+				const loadBtn = document.createElement('button');
+				loadBtn.type = 'button';
+				loadBtn.className = 'csv-blocker__btn';
+				loadBtn.textContent = 'Load anyway';
+
+				loadBtn.addEventListener('click', () => {
+					loadBtn.disabled = true;
+					blocker.classList.add('is-loading');
+					// We hide the inline blocker so the full overlay takes over.
+					blocker.remove();
+					const hideOverlay = helpers?.showLoadingOverlay?.();
+					if (helpers && hideOverlay) helpers.loadingOverlayStop = hideOverlay;
+					setTimeout(() => {
+						state.allowLargeLoad = true;
+						viewHelpers.requestRerender();
+					}, 0);
+				});
+
+				actions.appendChild(loadBtn);
+				const spinner = document.createElement('div');
+				spinner.className = 'csv-blocker__spinner';
+				spinner.setAttribute('aria-hidden', 'true');
+				actions.appendChild(spinner);
+				blocker.appendChild(title);
+				blocker.appendChild(desc);
+				blocker.appendChild(actions);
+				body.appendChild(blocker);
+
+				root.appendChild(toolbar.el);
+				root.appendChild(body);
+				container.appendChild(root);
+				return;
 			}
 
-			const viewSettings = {
-				...settings,
-				hasHeader: state.hasHeader,
+			if (!state.renderLimit) {
+				state.renderLimit = Math.min(
+					Math.max(
+						1,
+						settings.initialRenderRows || settings.maxRows || 500
+					),
+					Infinity
+				);
+			}
+
+			const parse = this.parseDelimited(effectiveText, delimiter, {
+				maxRows: state.renderLimit,
+				maxCols: settings.maxCols,
+			});
+
+			const stats = {
+				totalRows: parse.totalRows,
+				totalCols: parse.maxColumns,
+				visibleRows: parse.rows.length,
+				visibleCols: Math.min(parse.maxColumns, settings.maxCols),
 			};
+
+			root.style.setProperty(
+				'--csv-rownum-width',
+				this.getRowNumWidth(viewSettings, stats.visibleRows)
+			);
 
 			const toolbar = this.renderToolbar(
 				root,
@@ -267,9 +398,34 @@ class CsvFileRenderer extends FileRenderBase {
 
 			const body = document.createElement('div');
 			body.className = 'csv-view__body';
+			if (typeof state.scrollTop === 'number') {
+				body.scrollTop = state.scrollTop;
+			}
+			if (typeof state.scrollLeft === 'number') {
+				body.scrollLeft = state.scrollLeft;
+			}
+			body.addEventListener('scroll', () => {
+				state.scrollTop = body.scrollTop;
+				state.scrollLeft = body.scrollLeft;
+			});
 
 			const note = document.createElement('div');
 			note.className = 'csv-view__note';
+			const addNote = (text) => {
+				if (!text) return;
+				const line = document.createElement('div');
+				line.textContent = text;
+				note.appendChild(line);
+			};
+
+			if (
+				typeof settings.maxFileBytes === 'number' &&
+				helpers?.fileResult?.sizeBytes > settings.maxFileBytes
+			) {
+				addNote(
+					`Large file (${helpers.fileResult.sizeBytes.toLocaleString()} bytes). Loading the full CSV may be slow.`
+				);
+			}
 
 			if (state.mode === 'edit' && helpers?.csvTextRenderer) {
 				// We route source editing through TextFileRenderer so save/dirty state stays consistent.
@@ -285,7 +441,7 @@ class CsvFileRenderer extends FileRenderBase {
 					state,
 					viewSettings,
 					toolbar.refs,
-					note,
+					addNote,
 					filePath,
 					delimiter,
 					effectiveText,
@@ -295,8 +451,12 @@ class CsvFileRenderer extends FileRenderBase {
 
 			root.appendChild(toolbar.el);
 			root.appendChild(body);
-			if (note.textContent) root.appendChild(note);
+			if (note.childElementCount) root.appendChild(note);
 			container.appendChild(root);
+			if (helpers?.loadingOverlayStop) {
+				helpers.loadingOverlayStop();
+				helpers.loadingOverlayStop = null;
+			}
 		} catch (err) {
 			// We surface errors here so a broken CSV render doesn't look like an empty file.
 			console.error('CSV render failed:', err);
@@ -304,6 +464,10 @@ class CsvFileRenderer extends FileRenderBase {
 			message.className = 'csv-view__error';
 			message.textContent = 'CSV render failed. Check the console for details.';
 			container.appendChild(message);
+			if (helpers?.loadingOverlayStop) {
+				helpers.loadingOverlayStop();
+				helpers.loadingOverlayStop = null;
+			}
 		}
 	}
 
@@ -415,6 +579,7 @@ class CsvFileRenderer extends FileRenderBase {
 			state.hasHeader = hasHeader === true;
 			headerToggle.dataset.state = state.hasHeader ? 'on' : 'off';
 			headerToggle.setAttribute('aria-pressed', state.hasHeader);
+			helpers?.updateCsvSettings?.({ hasHeader: state.hasHeader });
 			if (notify && typeof onModeChange === 'function') onModeChange();
 		};
 
@@ -463,7 +628,7 @@ class CsvFileRenderer extends FileRenderBase {
 		state,
 		settings,
 		refs,
-		note,
+		addNote,
 		filePath,
 		delimiter,
 		sourceText,
@@ -518,11 +683,12 @@ class CsvFileRenderer extends FileRenderBase {
 			const rowNum = document.createElement(rowIndex === 0 ? 'th' : 'td');
 			rowNum.className = 'csv-table__rownum';
 			if (settings.hasHeader && rowIndex === 0) {
+				rowNum.classList.add('csv-table__rownum--header');
 				rowNum.textContent = '';
 			} else {
-			rowNum.textContent = String(
-				settings.hasHeader ? rowIndex : rowIndex + 1
-			);
+				rowNum.textContent = String(
+					settings.hasHeader ? rowIndex : rowIndex + 1
+				);
 			}
 			tr.appendChild(rowNum);
 
@@ -549,6 +715,55 @@ class CsvFileRenderer extends FileRenderBase {
 		table.appendChild(thead);
 		table.appendChild(tbody);
 		container.appendChild(table);
+		if (
+			typeof state.scrollTop === 'number' ||
+			typeof state.scrollLeft === 'number'
+		) {
+			// Restore scroll after the table has content.
+			requestAnimationFrame(() => {
+				if (typeof state.scrollTop === 'number') {
+					container.scrollTop = state.scrollTop;
+				}
+				if (typeof state.scrollLeft === 'number') {
+					container.scrollLeft = state.scrollLeft;
+				}
+			});
+		}
+
+		if (
+			parse.totalRows > rows.length &&
+			helpers?.requestRerender
+		) {
+			const remaining = parse.totalRows - rows.length;
+			const batch = Math.min(settings.loadBatchRows || 500, remaining);
+
+			const loadMore = document.createElement('div');
+			loadMore.className = 'csv-loadmore';
+
+			const btn = document.createElement('button');
+			btn.type = 'button';
+			btn.className = 'csv-loadmore__btn';
+			btn.textContent = `Load ${batch} more rows`;
+
+			btn.addEventListener('click', () => {
+				loadMore.classList.add('is-loading');
+				state.scrollTop = container.scrollTop;
+				state.scrollLeft = container.scrollLeft;
+				state.renderLimit = Math.min(
+					parse.totalRows,
+					rows.length + (settings.loadBatchRows || 500)
+				);
+				// Defer re-render so the spinner has a chance to paint.
+				setTimeout(() => helpers.requestRerender(), 0);
+			});
+
+			loadMore.appendChild(btn);
+			const spinner = document.createElement('div');
+			spinner.className = 'csv-loadmore__spinner';
+			spinner.setAttribute('aria-hidden', 'true');
+			loadMore.appendChild(spinner);
+			container.appendChild(loadMore);
+		}
 
 		const selectCell = (rowIndex, colIndex) => {
 			const nextRow = Math.max(0, Math.min(rows.length - 1, rowIndex));
@@ -724,12 +939,14 @@ class CsvFileRenderer extends FileRenderBase {
 		if (parse.limitedRows || parse.limitedCols) {
 			const parts = [];
 			if (parse.limitedRows) {
-				parts.push(`Showing first ${settings.maxRows} rows`);
+				parts.push(`Showing first ${rows.length} rows`);
 			}
 			if (parse.limitedCols) {
 				parts.push(`first ${settings.maxCols} columns`);
 			}
-			note.textContent = `${parts.join(', ')}. Editing disabled for truncated data.`;
+			addNote(
+				`${parts.join(', ')}. Editing disabled for truncated data.`
+			);
 		}
 	}
 

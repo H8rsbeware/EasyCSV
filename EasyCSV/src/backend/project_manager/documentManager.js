@@ -7,7 +7,7 @@ class DocumentManager {
 		if (!st.isFile()) throw new TypeError('Not a file');
 
 		const text = await fs.readFile(filePath, 'utf8');
-		return { ok: true, text, mtimeMs: st.mtimeMs };
+		return { ok: true, text, mtimeMs: st.mtimeMs, sizeBytes: st.size };
 	}
 
 	async save(filePath, text, expectedMtimeMs) {

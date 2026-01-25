@@ -1,0 +1,301 @@
+{
+  "sections": [
+    {
+      "id": "general",
+      "title": "General",
+      "description": "Core application preferences.",
+      "settings": [
+        {
+          "key": "preferences.theme",
+          "title": "Color Theme",
+          "description": "Switch between light and dark UI themes.",
+          "type": "enum",
+          "options": [
+            { "label": "Light", "value": "light" },
+            { "label": "Dark", "value": "dark" }
+          ],
+          "default": "dark"
+        },
+        {
+          "key": "preferences.fonts.mode",
+          "title": "Font Mode",
+          "description": "Simple sets interface + editor fonts globally. Advanced allows per-area fonts.",
+          "type": "enum",
+          "options": [
+            { "label": "Simple", "value": "simple" },
+            { "label": "Advanced", "value": "advanced" }
+          ],
+          "default": "simple"
+        },
+        {
+          "key": "preferences.fonts.interface",
+          "title": "Interface Font",
+          "description": "Font family for UI chrome and panels.",
+          "type": "enum",
+          "options": [
+            { "label": "EasySans", "value": "'EasySans', sans-serif" },
+            { "label": "EasyMono", "value": "'EasyMono', monospace" },
+            { "label": "System UI", "value": "system-ui, -apple-system, 'Segoe UI', sans-serif" },
+            { "label": "Segoe UI", "value": "'Segoe UI', sans-serif" },
+            { "label": "Arial", "value": "Arial, Helvetica, sans-serif" },
+            { "label": "Helvetica", "value": "Helvetica, Arial, sans-serif" },
+            { "label": "Verdana", "value": "Verdana, sans-serif" },
+            { "label": "Tahoma", "value": "Tahoma, sans-serif" },
+            { "label": "Trebuchet MS", "value": "'Trebuchet MS', sans-serif" },
+            { "label": "Times New Roman", "value": "'Times New Roman', Times, serif" },
+            { "label": "Georgia", "value": "Georgia, serif" }
+          ],
+          "default": "'EasySans', sans-serif"
+        },
+        {
+          "key": "preferences.fonts.editor",
+          "title": "Editor Font",
+          "description": "Font family for text, CSV, and code editing when using Simple mode.",
+          "type": "enum",
+          "options": [
+            { "label": "EasyMono", "value": "'EasyMono', monospace" },
+            { "label": "EasySans", "value": "'EasySans', sans-serif" },
+            { "label": "Consolas", "value": "Consolas, 'Lucida Console', monospace" },
+            { "label": "Courier New", "value": "'Courier New', Courier, monospace" },
+            { "label": "Lucida Console", "value": "'Lucida Console', monospace" },
+            { "label": "Monaco", "value": "Monaco, 'Courier New', monospace" },
+            { "label": "System UI", "value": "system-ui, -apple-system, 'Segoe UI', sans-serif" },
+            { "label": "Segoe UI", "value": "'Segoe UI', sans-serif" },
+            { "label": "Arial", "value": "Arial, Helvetica, sans-serif" },
+            { "label": "Verdana", "value": "Verdana, sans-serif" },
+            { "label": "Tahoma", "value": "Tahoma, sans-serif" }
+          ],
+          "default": "'EasyMono', monospace"
+        },
+        {
+          "key": "preferences.fonts.sidebar",
+          "title": "Sidebar Font",
+          "description": "Font family for the sidebar tree and header (Advanced mode).",
+          "type": "enum",
+          "options": [
+            { "label": "EasySans", "value": "'EasySans', sans-serif" },
+            { "label": "EasyMono", "value": "'EasyMono', monospace" },
+            { "label": "System UI", "value": "system-ui, -apple-system, 'Segoe UI', sans-serif" },
+            { "label": "Segoe UI", "value": "'Segoe UI', sans-serif" },
+            { "label": "Arial", "value": "Arial, Helvetica, sans-serif" },
+            { "label": "Verdana", "value": "Verdana, sans-serif" },
+            { "label": "Tahoma", "value": "Tahoma, sans-serif" },
+            { "label": "Trebuchet MS", "value": "'Trebuchet MS', sans-serif" },
+            { "label": "Times New Roman", "value": "'Times New Roman', Times, serif" },
+            { "label": "Georgia", "value": "Georgia, serif" }
+          ],
+          "default": "'EasySans', sans-serif"
+        },
+        {
+          "key": "preferences.fonts.text",
+          "title": "Text File Font",
+          "description": "Font family for text files and plain text views (Advanced mode).",
+          "type": "enum",
+          "options": [
+            { "label": "EasyMono", "value": "'EasyMono', monospace" },
+            { "label": "EasySans", "value": "'EasySans', sans-serif" },
+            { "label": "Consolas", "value": "Consolas, 'Lucida Console', monospace" },
+            { "label": "Courier New", "value": "'Courier New', Courier, monospace" },
+            { "label": "Lucida Console", "value": "'Lucida Console', monospace" },
+            { "label": "Monaco", "value": "Monaco, 'Courier New', monospace" },
+            { "label": "System UI", "value": "system-ui, -apple-system, 'Segoe UI', sans-serif" },
+            { "label": "Segoe UI", "value": "'Segoe UI', sans-serif" }
+          ],
+          "default": "'EasyMono', monospace"
+        },
+        {
+          "key": "preferences.fonts.csv",
+          "title": "CSV Viewer Font",
+          "description": "Font family for CSV table and source views (Advanced mode).",
+          "type": "enum",
+          "options": [
+            { "label": "EasyMono", "value": "'EasyMono', monospace" },
+            { "label": "EasySans", "value": "'EasySans', sans-serif" },
+            { "label": "Consolas", "value": "Consolas, 'Lucida Console', monospace" },
+            { "label": "Courier New", "value": "'Courier New', Courier, monospace" },
+            { "label": "Lucida Console", "value": "'Lucida Console', monospace" },
+            { "label": "Monaco", "value": "Monaco, 'Courier New', monospace" }
+          ],
+          "default": "'EasyMono', monospace"
+        },
+        {
+          "key": "preferences.fonts.csvEdit",
+          "title": "CSV Editing Font",
+          "description": "Font family for in-table CSV cell editing (Advanced mode).",
+          "type": "enum",
+          "options": [
+            { "label": "EasyMono", "value": "'EasyMono', monospace" },
+            { "label": "EasySans", "value": "'EasySans', sans-serif" },
+            { "label": "Consolas", "value": "Consolas, 'Lucida Console', monospace" },
+            { "label": "Courier New", "value": "'Courier New', Courier, monospace" },
+            { "label": "Lucida Console", "value": "'Lucida Console', monospace" },
+            { "label": "Monaco", "value": "Monaco, 'Courier New', monospace" }
+          ],
+          "default": "'EasyMono', monospace"
+        }
+      ]
+    },
+    {
+      "id": "csv",
+      "title": "CSV",
+      "description": "Defaults for CSV rendering and editing.",
+      "settings": [
+        {
+          "key": "preferences.csv.defaultMode",
+          "title": "Default CSV Mode",
+          "description": "Choose the initial view when opening CSV files.",
+          "type": "enum",
+          "options": [
+            { "label": "Table", "value": "table" },
+            { "label": "Text", "value": "text" }
+          ],
+          "default": "table"
+        },
+        {
+          "key": "preferences.csv.maxRows",
+          "title": "Maximum Rows",
+          "description": "Upper limit for rows parsed/rendered per file.",
+          "type": "number",
+          "min": 50,
+          "max": 200000,
+          "step": 50,
+          "default": 1000
+        },
+        {
+          "key": "preferences.csv.maxCols",
+          "title": "Maximum Columns",
+          "description": "Upper limit for columns parsed/rendered per file.",
+          "type": "number",
+          "min": 10,
+          "max": 5000,
+          "step": 10,
+          "default": 200
+        },
+        {
+          "key": "preferences.csv.maxSourceLines",
+          "title": "Maximum Source Lines",
+          "description": "Limits lines displayed in text source view.",
+          "type": "number",
+          "min": 100,
+          "max": 200000,
+          "step": 100,
+          "default": 2000
+        },
+        {
+          "key": "preferences.csv.initialRenderRows",
+          "title": "Initial Render Rows",
+          "description": "How many rows are rendered immediately on open.",
+          "type": "number",
+          "min": 50,
+          "max": 20000,
+          "step": 50,
+          "default": 500
+        },
+        {
+          "key": "preferences.csv.loadBatchRows",
+          "title": "Load Batch Rows",
+          "description": "Rows added each time you load more data.",
+          "type": "number",
+          "min": 50,
+          "max": 20000,
+          "step": 50,
+          "default": 500
+        },
+        {
+          "key": "preferences.csv.rowHeight",
+          "title": "Row Height",
+          "description": "Base height for data rows (in pixels).",
+          "type": "number",
+          "min": 14,
+          "max": 60,
+          "step": 1,
+          "default": 22
+        },
+        {
+          "key": "preferences.csv.minRowHeight",
+          "title": "Minimum Row Height",
+          "description": "Minimum row height when content is dense (in pixels).",
+          "type": "number",
+          "min": 12,
+          "max": 40,
+          "step": 1,
+          "default": 18
+        },
+        {
+          "key": "preferences.csv.colWidth",
+          "title": "Column Width",
+          "description": "Default column width (in pixels).",
+          "type": "number",
+          "min": 80,
+          "max": 800,
+          "step": 5,
+          "default": 220
+        },
+        {
+          "key": "preferences.csv.minColWidth",
+          "title": "Minimum Column Width",
+          "description": "Minimum column width (in pixels).",
+          "type": "number",
+          "min": 40,
+          "max": 400,
+          "step": 5,
+          "default": 80
+        },
+        {
+          "key": "preferences.csv.rowNumWidth",
+          "title": "Row Number Width",
+          "description": "Width of the row number gutter (in pixels).",
+          "type": "number",
+          "min": 20,
+          "max": 120,
+          "step": 1,
+          "default": 28
+        },
+        {
+          "key": "preferences.csv.headerHeight",
+          "title": "Header Height",
+          "description": "Height of the table header (in pixels).",
+          "type": "number",
+          "min": 18,
+          "max": 80,
+          "step": 1,
+          "default": 28
+        },
+        {
+          "key": "preferences.csv.hasHeader",
+          "title": "Treat First Row As Header",
+          "description": "Use the first row as column headers by default.",
+          "type": "boolean",
+          "default": true
+        },
+        {
+          "key": "preferences.csv.maxFileBytes",
+          "title": "Maximum File Size",
+          "description": "Block CSV files larger than this size (in bytes).",
+          "type": "number",
+          "min": 1000000,
+          "max": 500000000,
+          "step": 1000000,
+          "default": 20000000
+        },
+        {
+          "key": "preferences.csv.tabSize",
+          "title": "Tab Size",
+          "description": "Tab width in source view.",
+          "type": "number",
+          "min": 2,
+          "max": 8,
+          "step": 1,
+          "default": 4
+        },
+        {
+          "key": "preferences.csv.typeHighlighting",
+          "title": "Type Highlighting",
+          "description": "Highlight values by inferred type in source view.",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    }
+  ]
+}

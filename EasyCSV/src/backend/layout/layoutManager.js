@@ -183,6 +183,26 @@ class LayoutManager {
 				break;
 			}
 
+			case 'tab.openSettings': {
+				const existing = tabs.find((t) => t.kind === 'settings');
+				if (existing) {
+					activeTabId = existing.id;
+					break;
+				}
+
+				const id = 'settings';
+				const title = 'Settings';
+				tabs.push(
+					new TabBlueprint({
+						id,
+						kind: 'settings',
+						title,
+					})
+				);
+				activeTabId = id;
+				break;
+			}
+
 			case 'tab.close': {
 				const index = tabs.findIndex((t) => t.id === cmd.id);
 				if (index === -1) break;

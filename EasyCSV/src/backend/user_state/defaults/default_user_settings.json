@@ -1,12 +1,22 @@
 {
     "preferences": {
         "theme": "dark",
-        "font": "Aptos",
+        "fonts": {
+            "mode": "simple",
+            "interface": "'EasySans', sans-serif",
+            "editor": "'EasyMono', monospace",
+            "sidebar": "'EasySans', sans-serif",
+            "text": "'EasyMono', monospace",
+            "csv": "'EasyMono', monospace",
+            "csvEdit": "'EasyMono', monospace"
+        },
         "csv": {
             "defaultMode": "table",
             "maxRows": 1000,
             "maxCols": 200,
             "maxSourceLines": 2000,
+            "initialRenderRows": 500,
+            "loadBatchRows": 500,
             "rowHeight": 22,
             "minRowHeight": 18,
             "colWidth": 220,
@@ -14,6 +24,7 @@
             "rowNumWidth": 28,
             "headerHeight": 28,
             "hasHeader": true,
+            "maxFileBytes": 20000000,
             "tabSize": 4,
             "typeHighlighting": false
         }
