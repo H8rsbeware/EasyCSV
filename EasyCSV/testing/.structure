@@ -1,0 +1,279 @@
+# Test Comment & Generation Guide (JS/TS)
+
+Purpose:
+
+- We need tests that are easy to scan, easy to trust, and easy to extend.
+- The fastest way to do that is consistent structure + consistent comments + minimal ceremony.
+
+---
+
+## Directory + File Structure
+
+Organise tests by backend area, mirroring the code layout.
+
+Backend/
+<Directory>/
+<Target>.test.js
+
+Rules:
+
+- **One .test file per class or file** under test (preferred).
+- If a file owns multiple small utilities that are tightly coupled, it can share a single `<Target>.test.js`.
+- Avoid “mega” test files that cover multiple unrelated modules.
+
+Naming:
+
+- `<Class>.test.js` for class-focused modules.
+- `<module>.test.js` for functional modules.
+- If you have TS: same naming, just `.test.ts`.
+
+---
+
+## Required Comment Header (per test case)
+
+Every test case must start with this block **immediately above** the test. No exceptions.
+
+```js
+// TestingFunction - TestCase
+// Input - expected shape, value, etc
+// Output - expected shape, exception, or otherwise
+// Notes - any notes on implementation/etc to know
+// Importance - can the shape change, how fundamental is this code and test
+
+What each line must contain
+
+1) TestingFunction - TestCase
+
+    TestingFunction: the exact exported function or class method name.
+
+    TestCase: a short plain-English description of the scenario.
+
+Examples:
+
+// parseJwt - rejects invalid base64 payload
+// UserService.create - fails when email already exists
+// validateBulk - returns grouped errors by table
+
+2) Input
+
+    Include shape + key values that matter.
+
+    If relevant, include “minimum viable input” and “edge input”.
+
+Examples:
+
+// Input - token: string (3 segments), payload segment: "!!notbase64!!"
+//
+// Input - { tables: { queues: [{ name: "A" }] }, platform: "ecx" }
+
+3) Output
+
+    Describe return type, key fields, and critical invariants.
+
+    If throwing: name the error type and any required message fragments.
+
+Examples:
+
+// Output - throws JwtError (message contains "invalid payload")
+// Output - { ok: true, data: {...} } where data.tables.queues[0].id is uuid string
+
+4) Notes
+
+    Mention any setup assumptions, mocks, and why they exist.
+
+    Mention anything “fragile” (timers, randomness, ordering, locale).
+
+Examples:
+
+// Notes - freeze time to avoid exp drift; do not assert exact "iat", only presence
+// Notes - mock uuid_store only; do not mock validator imports (import-once rule)
+
+5) Importance
+
+    One of: Low | Medium | High | Critical.
+
+    Add whether the shape can change:
+
+        Shape: Stable (breaking change) vs Shape: Flexible (internal detail).
+
+Examples:
+
+// Importance - High (Shape: Stable). Used by /push and /validate; breaking changes cascade.
+
+Test Case Structure
+
+Use the minimal consistent skeleton:
+
+describe("<Target>", () => {
+  describe("<TestingFunction>", () => {
+    it("<TestCase>", async () => {
+      // comment header here
+      // arrange
+      // act
+      // assert
+    });
+  });
+});
+
+Rules:
+
+    Prefer one “idea” per test.
+
+    Keep “arrange/act/assert” as short as possible.
+
+    If the arrange is > ~10 lines, you probably need a helper.
+
+Setup / Dispose Rules (keep it boring)
+
+We want tests that:
+
+    don’t leak state,
+
+    don’t depend on order,
+
+    and don’t require reading 50 lines before you see the assertion.
+
+Guidelines:
+
+    Prefer pure functions and direct calls over integration scaffolding.
+
+    If you must use global setup:
+
+        Use beforeEach to create fresh instances.
+
+        Use afterEach to restore spies and reset modules.
+
+Jest examples:
+
+    Always cleanup:
+
+        jest.restoreAllMocks() in afterEach.
+
+        jest.useRealTimers() if you enabled fake timers.
+
+    Avoid beforeAll unless the setup is truly immutable.
+
+Mocking Policy (minimise it)
+
+We only mock when we must:
+
+    external I/O (network, filesystem, DB, Redis),
+
+    time/randomness,
+
+    platform adapters.
+
+Rules:
+
+    Prefer dependency injection over module-level mocking.
+
+    If mocking a module, document it in Notes and explain why.
+
+Avoid:
+
+    mocking the function under test,
+
+    mocking multiple layers (double-mocking),
+
+    snapshots for complex objects unless they’re stable and intentional.
+
+Assertions: what “good” looks like
+
+Assert the minimum that proves the behavior:
+
+    key fields,
+
+    invariants,
+
+    error types and important message fragments,
+
+    ordering only if ordering is part of the contract.
+
+Avoid:
+
+    asserting entire large objects unless the shape is the contract,
+
+    brittle exact strings unless required.
+
+Complexity Budget
+
+Keep tests small:
+
+    If a single test needs more than:
+
+        ~15 lines arrange,
+
+        ~5 lines act,
+
+        ~10 lines assert,
+        then extract helpers or split into multiple tests.
+
+Prefer helper patterns:
+
+    makeValidPayload()
+
+    makeRegistry({ overrides })
+
+    makeFakeAdapter({ behavior })
+
+Helpers should live near tests:
+
+    Backend/<Directory>/__testutils__/...
+
+    or inside the same .test.js file if only used there.
+
+Example (complete)
+
+it("rejects invalid payload segment", () => {
+  // parseJwt - rejects invalid base64 payload
+  // Input - token: string with 3 segments; payload segment: "!!notbase64!!"
+  // Output - throws JwtError (message contains "invalid payload")
+  // Notes - do not mock Buffer; this is a real decode failure path
+  // Importance - High (Shape: Stable). Auth is a gate for multiple endpoints.
+
+  const token = "aaa.!!notbase64!!.ccc";
+
+  expect(() => parseJwt(token)).toThrow(JwtError);
+  expect(() => parseJwt(token)).toThrow(/invalid payload/i);
+});
+
+Generator Rules (if you’re using AI/Codex to generate tests)
+
+When generating tests:
+
+    Always create the comment header block for each test.
+
+    Default to:
+
+        minimal setup,
+
+        minimal mocking,
+
+        direct invocation,
+
+        focused assertions.
+
+If unsure about contract stability:
+
+    Mark Importance as Medium (Shape: Flexible) and leave a Notes line explaining what might change.
+
+    Do not guess error types/messages. Prefer checking:
+
+        “throws” + key fragment,
+
+        or explicit error class if known.
+
+Quick checklist (PR review)
+
+    Every test has the required 5-line comment header.
+
+    File placement matches Backend/<Directory>/<Target>.test.js.
+
+    Tests don’t share state (order-independent).
+
+    Minimal mocking; mocks are documented in Notes.
+
+    Assertions test contract, not implementation trivia.
+
+    Complexity stays within budget (helpers used when needed).
+```

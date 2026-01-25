@@ -1,4 +1,8 @@
 import { FileRenderBase } from './FileRenderBase.js';
+import {
+	normalizeShortcutString,
+	shortcutFromEvent,
+} from '../menus/shortcuts.js';
 
 class CsvFileRenderer extends FileRenderBase {
 	constructor(options = {}) {
@@ -16,11 +20,30 @@ class CsvFileRenderer extends FileRenderBase {
 			colWidth: 220,
 			minColWidth: 80,
 			rowNumWidth: 28,
+			relativeLineNumbers: false,
 			headerHeight: 28,
 			hasHeader: true,
 			maxFileBytes: 20000000,
 			tabSize: 4,
 			typeHighlighting: false,
+			keybindings: {
+				csv: {
+					motionsEnabled: true,
+					jump: { mod: 'ctrl' },
+					tab: { key: 'Tab', rowEndMod: 'ctrl' },
+					up: { key: 'ArrowUp' },
+					down: { key: 'ArrowDown' },
+					left: { key: 'ArrowLeft' },
+					right: { key: 'ArrowRight' },
+					actions: {
+						edit: 'Enter',
+						commit: 'Enter',
+						leave: 'Escape',
+						copy: 'Ctrl+C',
+						paste: 'Ctrl+V',
+					},
+				},
+			},
 			...options.settings,
 		};
 		this.fileState = new Map();
@@ -61,6 +84,8 @@ class CsvFileRenderer extends FileRenderBase {
 				scrollTop: 0,
 				scrollLeft: 0,
 				selection: null,
+				motionCount: '',
+				motionTimer: null,
 			});
 		}
 		return this.fileState.get(key);
@@ -360,14 +385,19 @@ class CsvFileRenderer extends FileRenderBase {
 			}
 
 			const parse = this.parseDelimited(effectiveText, delimiter, {
-				maxRows: state.renderLimit,
-				maxCols: settings.maxCols,
+				maxRows: Infinity,
+				maxCols: Infinity,
 			});
 
 			const stats = {
 				totalRows: parse.totalRows,
 				totalCols: parse.maxColumns,
-				visibleRows: parse.rows.length,
+				visibleRows: Math.min(
+					parse.totalRows,
+					Number.isFinite(settings.maxRows)
+						? settings.maxRows
+						: parse.totalRows
+				),
 				visibleCols: Math.min(parse.maxColumns, settings.maxCols),
 			};
 
@@ -432,7 +462,8 @@ class CsvFileRenderer extends FileRenderBase {
 				helpers.csvTextRenderer.renderEditor(
 					body,
 					filePath,
-					helpers.fileResult ?? { text: effectiveText, mtimeMs: null }
+					helpers.fileResult ?? { text: effectiveText, mtimeMs: null },
+					{ relativeLineNumbers: viewSettings.relativeLineNumbers }
 				);
 			} else {
 				this.renderTableView(
@@ -634,12 +665,15 @@ class CsvFileRenderer extends FileRenderBase {
 		sourceText,
 		helpers
 	) {
-		const canEdit = !parse.limitedRows && !parse.limitedCols;
+		const totalRows = parse.totalRows;
+		const totalCols = parse.maxColumns;
+		const maxRenderRows = Number.isFinite(settings.maxRows)
+			? settings.maxRows
+			: totalRows;
+		const canEdit = true;
 		let tableRows = parse.rows;
 
-		if (!canEdit) {
-			state.tableRows = null;
-		} else if (
+		if (
 			!state.tableRows ||
 			(!state.dirty && state.tableRows.sourceText !== sourceText)
 		) {
@@ -658,9 +692,52 @@ class CsvFileRenderer extends FileRenderBase {
 			this.ensureTrailingEmpty(tableRows);
 		}
 
-		const rows = tableRows;
+		if (typeof state.renderLimit === 'number') {
+			state.renderLimit = Math.min(state.renderLimit, maxRenderRows);
+		}
+
+		const renderLimit = Math.min(
+			typeof state.renderLimit === 'number' ? state.renderLimit : maxRenderRows,
+			maxRenderRows,
+			tableRows.length
+		);
+		const rows = tableRows.slice(0, renderLimit);
 		const actualCols = rows.reduce((m, r) => Math.max(m, r.length), 0);
 		const visibleCols = Math.min(actualCols, settings.maxCols);
+		const limitedRows = totalRows > maxRenderRows;
+		const limitedCols = totalCols > settings.maxCols;
+		const useRelative = settings.relativeLineNumbers === true;
+
+		const getDisplayIndex = (rowIndex) => {
+			if (settings.hasHeader && rowIndex === 0) return null;
+			return settings.hasHeader ? rowIndex : rowIndex + 1;
+		};
+
+		const getActiveDisplayIndex = () => {
+			if (!useRelative) return null;
+			const selectedRow = state.selection?.row;
+			if (typeof selectedRow === 'number') {
+				const display = getDisplayIndex(selectedRow);
+				if (display != null) return display;
+			}
+			const firstDataRow = settings.hasHeader ? 1 : 0;
+			if (rows.length > firstDataRow) {
+				return getDisplayIndex(firstDataRow);
+			}
+			return null;
+		};
+
+		let activeDisplayIndex = getActiveDisplayIndex();
+
+		const formatRowNumber = (displayIndex) => {
+			if (displayIndex == null) return '';
+			if (useRelative && activeDisplayIndex != null) {
+				return displayIndex === activeDisplayIndex
+					? '0'
+					: String(Math.abs(displayIndex - activeDisplayIndex));
+			}
+			return String(displayIndex);
+		};
 
 		if (!rows.length || visibleCols === 0) {
 			const empty = document.createElement('div');
@@ -677,19 +754,20 @@ class CsvFileRenderer extends FileRenderBase {
 		const thead = document.createElement('thead');
 		const tbody = document.createElement('tbody');
 
+		const rowNumCells = [];
+
 		rows.forEach((row, rowIndex) => {
 			const tr = document.createElement('tr');
 
 			const rowNum = document.createElement(rowIndex === 0 ? 'th' : 'td');
 			rowNum.className = 'csv-table__rownum';
+			rowNum.dataset.row = String(rowIndex);
+			const displayIndex = getDisplayIndex(rowIndex);
 			if (settings.hasHeader && rowIndex === 0) {
 				rowNum.classList.add('csv-table__rownum--header');
-				rowNum.textContent = '';
-			} else {
-				rowNum.textContent = String(
-					settings.hasHeader ? rowIndex : rowIndex + 1
-				);
 			}
+			rowNum.textContent = formatRowNumber(displayIndex);
+			rowNumCells.push(rowNum);
 			tr.appendChild(rowNum);
 
 			for (let c = 0; c < visibleCols; c += 1) {
@@ -730,11 +808,8 @@ class CsvFileRenderer extends FileRenderBase {
 			});
 		}
 
-		if (
-			parse.totalRows > rows.length &&
-			helpers?.requestRerender
-		) {
-			const remaining = parse.totalRows - rows.length;
+		if (totalRows > rows.length && helpers?.requestRerender) {
+			const remaining = Math.min(totalRows, maxRenderRows) - rows.length;
 			const batch = Math.min(settings.loadBatchRows || 500, remaining);
 
 			const loadMore = document.createElement('div');
@@ -750,7 +825,7 @@ class CsvFileRenderer extends FileRenderBase {
 				state.scrollTop = container.scrollTop;
 				state.scrollLeft = container.scrollLeft;
 				state.renderLimit = Math.min(
-					parse.totalRows,
+					maxRenderRows,
 					rows.length + (settings.loadBatchRows || 500)
 				);
 				// Defer re-render so the spinner has a chance to paint.
@@ -764,6 +839,37 @@ class CsvFileRenderer extends FileRenderBase {
 			loadMore.appendChild(spinner);
 			container.appendChild(loadMore);
 		}
+
+		const updateRowNumbers = () => {
+			if (!useRelative) return;
+			activeDisplayIndex = getActiveDisplayIndex();
+			rowNumCells.forEach((cell) => {
+				const rowIndex = Number(cell.dataset.row);
+				const displayIndex = getDisplayIndex(rowIndex);
+				if (settings.hasHeader && rowIndex === 0) {
+					cell.classList.add('csv-table__rownum--header');
+				}
+				cell.textContent = formatRowNumber(displayIndex);
+			});
+		};
+
+		const actionBindings = {
+			edit: normalizeShortcutString(
+				settings?.keybindings?.csv?.actions?.edit || 'Enter'
+			),
+			commit: normalizeShortcutString(
+				settings?.keybindings?.csv?.actions?.commit || 'Enter'
+			),
+			leave: normalizeShortcutString(
+				settings?.keybindings?.csv?.actions?.leave || 'Escape'
+			),
+			copy: normalizeShortcutString(
+				settings?.keybindings?.csv?.actions?.copy || 'Ctrl+C'
+			),
+			paste: normalizeShortcutString(
+				settings?.keybindings?.csv?.actions?.paste || 'Ctrl+V'
+			),
+		};
 
 		const selectCell = (rowIndex, colIndex) => {
 			const nextRow = Math.max(0, Math.min(rows.length - 1, rowIndex));
@@ -783,97 +889,48 @@ class CsvFileRenderer extends FileRenderBase {
 				.forEach((el) => el.classList.remove('is-selected'));
 			cell.classList.add('is-selected');
 			if (refs?.copyBtn) refs.copyBtn.disabled = false;
+			updateRowNumbers();
 			cell.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+			if (document.activeElement !== table) {
+				table.focus();
+			}
 		};
 
-		table.addEventListener('click', (event) => {
-			const cell = event.target.closest('td, th');
-			if (!cell || cell.classList.contains('csv-table__rownum')) return;
-			const rowIndex = Number(cell.dataset.row);
-			const colIndex = Number(cell.dataset.col);
-
-			selectCell(rowIndex, colIndex);
-		});
-
-		table.addEventListener('keydown', (event) => {
-			if (event.target?.classList?.contains('csv-cell-editor')) return;
-			if (!rows.length || visibleCols === 0) return;
-
-			const hasSelection = state.selection != null;
-			const startRow = hasSelection ? state.selection.row : 0;
-			const startCol = hasSelection ? state.selection.col : 0;
-
-			const moveBy = (dr, dc) => {
-				selectCell(startRow + dr, startCol + dc);
-			};
-
-			const jumpTo = (row, col) => {
-				selectCell(row, col);
-			};
-
-			switch (event.key) {
-				case 'ArrowUp':
-					event.preventDefault();
-					if (event.ctrlKey) {
-						jumpTo(0, startCol);
-					} else {
-						moveBy(-1, 0);
-					}
-					return;
-				case 'ArrowDown':
-					event.preventDefault();
-					if (event.ctrlKey) {
-						jumpTo(rows.length - 1, startCol);
-					} else {
-						moveBy(1, 0);
-					}
-					return;
-				case 'ArrowLeft':
-					event.preventDefault();
-					if (event.ctrlKey) {
-						jumpTo(startRow, 0);
-					} else {
-						moveBy(0, -1);
-					}
-					return;
-				case 'ArrowRight':
-					event.preventDefault();
-					if (event.ctrlKey) {
-						jumpTo(startRow, visibleCols - 1);
-					} else {
-						moveBy(0, 1);
-					}
-					return;
-				case 'Tab': {
-					event.preventDefault();
-					const delta = event.shiftKey ? -1 : 1;
-					let nextRow = startRow;
-					let nextCol = startCol + delta;
-
-					if (nextCol < 0) {
-						nextRow = Math.max(0, startRow - 1);
-						nextCol = visibleCols - 1;
-					} else if (nextCol >= visibleCols) {
-						nextRow = Math.min(rows.length - 1, startRow + 1);
-						nextCol = 0;
-					}
-
-					selectCell(nextRow, nextCol);
-					return;
-				}
-				default:
-					break;
+		const applyCellValue = (rowIndex, colIndex, nextValue) => {
+			const selector = `[data-row="${rowIndex}"][data-col="${colIndex}"]`;
+			const cell = table.querySelector(selector);
+			if (!cell || !state.tableRows) return false;
+			cell.textContent = nextValue;
+			if (!state.tableRows.rows[rowIndex]) {
+				state.tableRows.rows[rowIndex] = [];
 			}
-		});
+			state.tableRows.rows[rowIndex][colIndex] = nextValue;
+			const expanded = this.ensureTrailingEmpty(state.tableRows.rows);
+			const trimmedRows = this.trimTrailingEmpty(state.tableRows.rows);
+			const nextText = this.serializeRows(trimmedRows, delimiter);
+			state.sourceText = nextText;
+			state.tableRows.sourceText = nextText;
+			if (helpers?.csvTextRenderer) {
+				helpers.csvTextRenderer.setEditorText(filePath, nextText, {
+					markDirty: true,
+				});
+			}
+			if (!state.dirty) state.dirty = true;
+			this.notifyDirtyState(filePath, true);
+			if (refs?.saveBtn) refs.saveBtn.disabled = false;
+			if (expanded && helpers?.requestRerender) {
+				helpers.requestRerender();
+			}
+			return true;
+		};
 
-		table.addEventListener('dblclick', (event) => {
-			const cell = event.target.closest('td, th');
+		const beginEdit = (rowIndex, colIndex) => {
+			const selector = `[data-row="${rowIndex}"][data-col="${colIndex}"]`;
+			const cell = table.querySelector(selector);
 			if (!cell || cell.classList.contains('csv-table__rownum')) return;
 			if (!cell.dataset.editable) return;
 			if (cell.querySelector('input')) return;
 
-			const rowIndex = Number(cell.dataset.row);
-			const colIndex = Number(cell.dataset.col);
 			const original = cell.textContent ?? '';
 
 			cell.classList.add('is-editing');
@@ -891,27 +948,7 @@ class CsvFileRenderer extends FileRenderBase {
 				const nextValue = input.value;
 				cell.classList.remove('is-editing');
 				cell.textContent = nextValue;
-				if (!state.tableRows) return;
-				if (!state.tableRows.rows[rowIndex]) {
-					state.tableRows.rows[rowIndex] = [];
-				}
-				state.tableRows.rows[rowIndex][colIndex] = nextValue;
-				const expanded = this.ensureTrailingEmpty(state.tableRows.rows);
-				const trimmedRows = this.trimTrailingEmpty(state.tableRows.rows);
-				const nextText = this.serializeRows(trimmedRows, delimiter);
-				state.sourceText = nextText;
-				state.tableRows.sourceText = nextText;
-				if (helpers?.csvTextRenderer) {
-					helpers.csvTextRenderer.setEditorText(filePath, nextText, {
-						markDirty: true,
-					});
-				}
-				if (!state.dirty) state.dirty = true;
-				this.notifyDirtyState(filePath, true);
-				if (refs?.saveBtn) refs.saveBtn.disabled = false;
-				if (expanded && helpers?.requestRerender) {
-					helpers.requestRerender();
-				}
+				applyCellValue(rowIndex, colIndex, nextValue);
 				selectCell(rowIndex, colIndex);
 				table.focus();
 			};
@@ -922,37 +959,292 @@ class CsvFileRenderer extends FileRenderBase {
 			};
 
 			input.addEventListener('keydown', (e) => {
-				if (e.key === 'Enter') {
-					e.preventDefault();
-					commit();
-				} else if (e.key === 'Escape') {
+				const combo = shortcutFromEvent(e);
+				if (actionBindings.leave && combo === actionBindings.leave) {
 					e.preventDefault();
 					cancel();
+					table.focus();
+					return;
+				}
+				if (actionBindings.commit && combo === actionBindings.commit) {
+					e.preventDefault();
+					commit();
 				}
 			});
 
 			input.addEventListener('blur', () => {
 				commit();
 			});
+		};
+
+		table.addEventListener('click', (event) => {
+			const cell = event.target.closest('td, th');
+			if (!cell || cell.classList.contains('csv-table__rownum')) return;
+			const rowIndex = Number(cell.dataset.row);
+			const colIndex = Number(cell.dataset.col);
+
+			selectCell(rowIndex, colIndex);
 		});
 
-		if (parse.limitedRows || parse.limitedCols) {
+		table.addEventListener('keydown', (event) => {
+			if (event.target?.classList?.contains('csv-cell-editor')) return;
+			if (!rows.length || visibleCols === 0) return;
+
+			const bindingCfg = settings?.keybindings?.csv || {};
+			const motionEnabled = bindingCfg.motionsEnabled !== false;
+			const normalizeKey = (key) =>
+				typeof key === 'string' ? key.toLowerCase() : key;
+
+			const normalizeMod = (mod) => {
+				const next = typeof mod === 'string' ? mod.toLowerCase() : 'none';
+				if (['ctrl', 'alt', 'shift', 'meta'].includes(next)) return next;
+				return 'none';
+			};
+
+			const buildBinding = (value, fallbackKey) => {
+				const key =
+					typeof value?.key === 'string' && value.key
+						? value.key
+						: fallbackKey;
+				return { key: normalizeKey(key) };
+			};
+
+			const bindings = {
+				up: buildBinding(bindingCfg.up, 'ArrowUp'),
+				down: buildBinding(bindingCfg.down, 'ArrowDown'),
+				left: buildBinding(bindingCfg.left, 'ArrowLeft'),
+				right: buildBinding(bindingCfg.right, 'ArrowRight'),
+			};
+
+			const jumpMod = normalizeMod(bindingCfg?.jump?.mod);
+			const tabKey = normalizeKey(bindingCfg?.tab?.key || 'Tab');
+			const tabRowEndMod = normalizeMod(
+				bindingCfg?.tab?.rowEndMod || 'ctrl'
+			);
+			const hasNoMods = (ev) =>
+				!ev.ctrlKey && !ev.altKey && !ev.shiftKey && !ev.metaKey;
+
+			const hasOnlyMod = (ev, mod) => {
+				if (mod === 'none') return false;
+				const hasCtrl = ev.ctrlKey;
+				const hasAlt = ev.altKey;
+				const hasShift = ev.shiftKey;
+				const hasMeta = ev.metaKey;
+				if (mod === 'ctrl') return hasCtrl && !hasAlt && !hasShift && !hasMeta;
+				if (mod === 'alt') return hasAlt && !hasCtrl && !hasShift && !hasMeta;
+				if (mod === 'shift') return hasShift && !hasCtrl && !hasAlt && !hasMeta;
+				if (mod === 'meta') return hasMeta && !hasCtrl && !hasAlt && !hasShift;
+				return false;
+			};
+
+			const hasMod = (ev, mod) => {
+				if (mod === 'ctrl') return ev.ctrlKey;
+				if (mod === 'alt') return ev.altKey;
+				if (mod === 'shift') return ev.shiftKey;
+				if (mod === 'meta') return ev.metaKey;
+				return false;
+			};
+
+			const hasOnlyAllowedTabMods = (ev) => {
+				const allowed = new Set(['shift']);
+				if (tabRowEndMod !== 'none') allowed.add(tabRowEndMod);
+
+				const active = [];
+				if (ev.ctrlKey) active.push('ctrl');
+				if (ev.altKey) active.push('alt');
+				if (ev.shiftKey) active.push('shift');
+				if (ev.metaKey) active.push('meta');
+
+				return active.every((mod) => allowed.has(mod));
+			};
+
+			const matchesBinding = (binding, ev) => {
+				const key = normalizeKey(ev.key);
+				if (!binding || !binding.key || key !== binding.key) return false;
+				return true;
+			};
+
+			const clearMotionBuffer = () => {
+				if (state.motionTimer) {
+					clearTimeout(state.motionTimer);
+					state.motionTimer = null;
+				}
+				state.motionCount = '';
+			};
+
+			const pushMotionDigit = (digit) => {
+				state.motionCount = `${state.motionCount || ''}${digit}`;
+				if (state.motionTimer) clearTimeout(state.motionTimer);
+				state.motionTimer = setTimeout(() => {
+					clearMotionBuffer();
+				}, 800);
+			};
+
+			const consumeMotionCount = () => {
+				const parsed = Number.parseInt(state.motionCount || '1', 10);
+				clearMotionBuffer();
+				return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+			};
+
+			const hasSelection = state.selection != null;
+			const startRow = hasSelection ? state.selection.row : 0;
+			const startCol = hasSelection ? state.selection.col : 0;
+
+			const moveBy = (dr, dc, steps = 1) => {
+				selectCell(startRow + dr * steps, startCol + dc * steps);
+			};
+
+			const jumpTo = (row, col) => {
+				selectCell(row, col);
+			};
+
+			const key = normalizeKey(event.key);
+			if (motionEnabled && /^\d$/.test(key) && hasNoMods(event)) {
+				event.preventDefault();
+				pushMotionDigit(key);
+				return;
+			}
+
+			const combo = shortcutFromEvent(event);
+			if (actionBindings.edit && combo === actionBindings.edit) {
+				event.preventDefault();
+				const row = state.selection?.row ?? 0;
+				const col = state.selection?.col ?? 0;
+				if (!canEdit) return;
+				beginEdit(row, col);
+				return;
+			}
+			if (actionBindings.copy && combo === actionBindings.copy) {
+				event.preventDefault();
+				if (state.selection?.value) {
+					this.copyToClipboard(state.selection.value);
+				}
+				return;
+			}
+			if (actionBindings.paste && combo === actionBindings.paste) {
+				event.preventDefault();
+				const row = state.selection?.row ?? 0;
+				const col = state.selection?.col ?? 0;
+				if (!canEdit) return;
+				if (navigator?.clipboard?.readText) {
+					navigator.clipboard
+						.readText()
+						.then((text) => {
+							if (typeof text !== 'string') return;
+							applyCellValue(row, col, text);
+						})
+						.catch(() => {});
+				}
+				return;
+			}
+
+			const getMotionCount = () =>
+				motionEnabled ? consumeMotionCount() : 1;
+
+			if (key === tabKey && hasOnlyAllowedTabMods(event)) {
+				event.preventDefault();
+				const isReverse = event.shiftKey === true;
+				const useRowEnd =
+					tabRowEndMod !== 'none' && hasMod(event, tabRowEndMod);
+
+				if (useRowEnd) {
+					const targetCol = isReverse ? 0 : visibleCols - 1;
+					selectCell(startRow, targetCol);
+					return;
+				}
+
+				const delta = isReverse ? -1 : 1;
+				let nextRow = startRow;
+				let nextCol = startCol + delta;
+
+				if (nextCol < 0) {
+					nextRow = Math.max(0, startRow - 1);
+					nextCol = visibleCols - 1;
+				} else if (nextCol >= visibleCols) {
+					nextRow = Math.min(rows.length - 1, startRow + 1);
+					nextCol = 0;
+				}
+
+				selectCell(nextRow, nextCol);
+				return;
+			}
+
+			if (matchesBinding(bindings.up, event) && hasOnlyMod(event, jumpMod)) {
+				event.preventDefault();
+				jumpTo(0, startCol);
+				return;
+			}
+			if (matchesBinding(bindings.down, event) && hasOnlyMod(event, jumpMod)) {
+				event.preventDefault();
+				jumpTo(rows.length - 1, startCol);
+				return;
+			}
+			if (matchesBinding(bindings.left, event) && hasOnlyMod(event, jumpMod)) {
+				event.preventDefault();
+				jumpTo(startRow, 0);
+				return;
+			}
+			if (matchesBinding(bindings.right, event) && hasOnlyMod(event, jumpMod)) {
+				event.preventDefault();
+				jumpTo(startRow, visibleCols - 1);
+				return;
+			}
+
+			if (matchesBinding(bindings.up, event) && hasNoMods(event)) {
+				event.preventDefault();
+				moveBy(-1, 0, getMotionCount());
+				return;
+			}
+			if (matchesBinding(bindings.down, event) && hasNoMods(event)) {
+				event.preventDefault();
+				moveBy(1, 0, getMotionCount());
+				return;
+			}
+			if (matchesBinding(bindings.left, event) && hasNoMods(event)) {
+				event.preventDefault();
+				moveBy(0, -1, getMotionCount());
+				return;
+			}
+			if (matchesBinding(bindings.right, event) && hasNoMods(event)) {
+				event.preventDefault();
+				moveBy(0, 1, getMotionCount());
+				return;
+			}
+
+			if (state.motionCount) {
+				clearMotionBuffer();
+			}
+		});
+
+		table.addEventListener('dblclick', (event) => {
+			const cell = event.target.closest('td, th');
+			if (!cell || cell.classList.contains('csv-table__rownum')) return;
+			if (!cell.dataset.editable) return;
+			if (cell.querySelector('input')) return;
+
+			const rowIndex = Number(cell.dataset.row);
+			const colIndex = Number(cell.dataset.col);
+			beginEdit(rowIndex, colIndex);
+		});
+
+		if (limitedRows || limitedCols) {
 			const parts = [];
-			if (parse.limitedRows) {
+			if (limitedRows) {
 				parts.push(`Showing first ${rows.length} rows`);
 			}
-			if (parse.limitedCols) {
+			if (limitedCols) {
 				parts.push(`first ${settings.maxCols} columns`);
 			}
-			addNote(
-				`${parts.join(', ')}. Editing disabled for truncated data.`
-			);
+			addNote(`${parts.join(', ')}. Rendering is truncated.`);
 		}
 	}
 
 	renderSourceView(container, text, delimiter, settings, note) {
 		const source = document.createElement('div');
 		source.className = 'csv-source';
+
+		const useRelative = settings?.relativeLineNumbers === true;
+		const activeLine = useRelative ? 1 : null;
 
 		const lines = text.split(/\r?\n/);
 		const limited = lines.length > settings.maxSourceLines;
@@ -966,7 +1258,15 @@ class CsvFileRenderer extends FileRenderBase {
 
 			const lineNo = document.createElement('span');
 			lineNo.className = 'csv-source__no';
-			lineNo.textContent = String(index + 1);
+			const absoluteLine = index + 1;
+			if (useRelative && activeLine) {
+				lineNo.textContent =
+					absoluteLine === activeLine
+						? '0'
+						: String(Math.abs(absoluteLine - activeLine));
+			} else {
+				lineNo.textContent = String(absoluteLine);
+			}
 
 			const lineBody = document.createElement('span');
 			lineBody.className = 'csv-source__body';

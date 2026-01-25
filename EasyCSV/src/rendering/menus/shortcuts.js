@@ -82,4 +82,4 @@ function installShortcutHandler(shortcutMap, commandHandler) {
     });
 }
 
-export {normalizeShortcutString, installShortcutHandler}
+export {normalizeShortcutString, shortcutFromEvent, installShortcutHandler}

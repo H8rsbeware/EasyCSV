@@ -165,6 +165,17 @@ class UserState {
                 if (this.MergeDefaults(current, value)) {
                     changed = true;
                 }
+                return;
+            }
+
+            if (
+                value &&
+                typeof value === "object" &&
+                !Array.isArray(value) &&
+                (!current || typeof current !== "object" || Array.isArray(current))
+            ) {
+                target[key] = JSON.parse(JSON.stringify(value));
+                changed = true;
             }
         });
 

@@ -13,6 +13,9 @@ contextBridge.exposeInMainWorld('theme', {
 
 contextBridge.exposeInMainWorld('menuApi', {
 	getBlueprint: () => ipcRenderer.invoke('menu:getBlueprint'),
+	getShortcuts: () => ipcRenderer.invoke('menu:getShortcuts'),
+	setShortcut: (command, shortcut) =>
+		ipcRenderer.invoke('menu:setShortcut', { command, shortcut }),
 	sendCommand: (command) => ipcRenderer.send('menu:command', command),
 });
 

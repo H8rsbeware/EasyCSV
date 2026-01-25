@@ -16,17 +16,20 @@ class TextFileRenderer extends FileRenderBase {
 		return `tok-${token.type}`;
 	}
 
-	renderViewer(container, text) {
+	renderViewer(container, text, viewSettings = {}) {
 		container.innerHTML = '';
 
 		const viewer = document.createElement('div');
 		viewer.className = 'text-viewer';
+
+		const useRelative = viewSettings.relativeLineNumbers === true;
 
 		const lines = text.split(/\r?\n/);
 		// Hard cap keeps very large files from freezing the renderer.
 		const maxLines = 2000;
 		const limited = lines.length > maxLines;
 		const visibleLines = limited ? lines.slice(0, maxLines) : lines;
+		const activeLine = useRelative ? 1 : null;
 
 		for (let i = 0; i < visibleLines.length; i += 1) {
 			const lineEl = document.createElement('div');
@@ -34,7 +37,15 @@ class TextFileRenderer extends FileRenderBase {
 
 			const lineNo = document.createElement('span');
 			lineNo.className = 'text-line__no';
-			lineNo.textContent = String(i + 1);
+			const absoluteLine = i + 1;
+			if (useRelative && activeLine) {
+				lineNo.textContent =
+					absoluteLine === activeLine
+						? '0'
+						: String(Math.abs(absoluteLine - activeLine));
+			} else {
+				lineNo.textContent = String(absoluteLine);
+			}
 
 			const lineBody = document.createElement('span');
 			lineBody.className = 'text-line__body';
@@ -66,7 +77,7 @@ class TextFileRenderer extends FileRenderBase {
 		container.appendChild(viewer);
 	}
 
-	renderEditor(container, filePath, result) {
+	renderEditor(container, filePath, result, viewSettings = {}) {
 		container.innerHTML = '';
 
 		const state =
@@ -130,16 +141,49 @@ class TextFileRenderer extends FileRenderBase {
 			return count;
 		};
 
-		const renderGutter = (lines) => {
-			gutter.innerHTML = '';
-			const frag = document.createDocumentFragment();
-			for (let i = 1; i <= lines; i += 1) {
-				const ln = document.createElement('div');
-				ln.className = 'text-editor__line-no';
-				ln.textContent = String(i);
-				frag.appendChild(ln);
+		const useRelative = viewSettings.relativeLineNumbers === true;
+
+		const getCursorLine = () => {
+			if (!useRelative) return 1;
+			const value = textarea.value || '';
+			const pos = Math.max(0, textarea.selectionStart || 0);
+			let line = 1;
+			for (let i = 0; i < pos && i < value.length; i += 1) {
+				if (value.charCodeAt(i) === 10) line += 1;
 			}
-			gutter.appendChild(frag);
+			return line;
+		};
+
+		const renderGutter = (lines, activeLine) => {
+			const existing = gutter.children.length;
+			const target = Math.max(0, lines || 0);
+
+			if (existing > target) {
+				for (let i = existing - 1; i >= target; i -= 1) {
+					gutter.removeChild(gutter.children[i]);
+				}
+			}
+
+			if (existing < target) {
+				const frag = document.createDocumentFragment();
+				for (let i = existing + 1; i <= target; i += 1) {
+					const ln = document.createElement('div');
+					ln.className = 'text-editor__line-no';
+					frag.appendChild(ln);
+				}
+				gutter.appendChild(frag);
+			}
+
+			for (let i = 1; i <= target; i += 1) {
+				const ln = gutter.children[i - 1];
+				if (!ln) continue;
+				if (useRelative && activeLine) {
+					ln.textContent =
+						i === activeLine ? '0' : String(Math.abs(i - activeLine));
+				} else {
+					ln.textContent = String(i);
+				}
+			}
 		};
 
 		const renderHighlight = (value) => {
@@ -166,6 +210,7 @@ class TextFileRenderer extends FileRenderBase {
 		};
 
 		let lastLineCount = countLines(textarea.value);
+		let lastActiveLine = getCursorLine();
 		let pendingGutterTimer = null;
 		let pendingHighlightTimer = null;
 
@@ -174,9 +219,14 @@ class TextFileRenderer extends FileRenderBase {
 			pendingGutterTimer = setTimeout(() => {
 				pendingGutterTimer = null;
 				const nextCount = countLines(textarea.value);
-				if (nextCount !== lastLineCount) {
+				const nextActiveLine = getCursorLine();
+				if (
+					nextCount !== lastLineCount ||
+					nextActiveLine !== lastActiveLine
+				) {
 					lastLineCount = nextCount;
-					renderGutter(nextCount);
+					lastActiveLine = nextActiveLine;
+					renderGutter(nextCount, nextActiveLine);
 				}
 			}, 80);
 		};
@@ -208,6 +258,13 @@ class TextFileRenderer extends FileRenderBase {
 			markDirty();
 		});
 
+		['click', 'keyup', 'mouseup', 'focus', 'select'].forEach((evt) => {
+			textarea.addEventListener(evt, () => {
+				if (!useRelative) return;
+				scheduleGutterSync();
+			});
+		});
+
 		textarea.addEventListener('scroll', () => {
 			gutter.scrollTop = textarea.scrollTop;
 			highlight.scrollTop = textarea.scrollTop;
@@ -221,7 +278,7 @@ class TextFileRenderer extends FileRenderBase {
 			});
 		});
 
-		renderGutter(lastLineCount);
+		renderGutter(lastLineCount, lastActiveLine);
 		renderHighlight(textarea.value);
 		this.notifyDirtyState(filePath, state.dirty);
 		// Focus editor so menu edit commands (cut/copy/paste/undo/redo) target it.
@@ -248,7 +305,8 @@ class TextFileRenderer extends FileRenderBase {
 			this.editorState.set(filePath, state);
 
 			lastLineCount = countLines(textarea.value);
-			renderGutter(lastLineCount);
+			lastActiveLine = getCursorLine();
+			renderGutter(lastLineCount, lastActiveLine);
 			renderHighlight(textarea.value);
 
 			if (selection) {

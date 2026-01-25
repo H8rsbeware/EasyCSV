@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "electron src/main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test \"testing/**/*.test.js\"",
     "start": "electron src/main.js",
     "debug": "electron src/main.js --trace-warnings"
   },

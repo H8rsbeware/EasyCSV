@@ -132,6 +132,13 @@
             { "label": "Monaco", "value": "Monaco, 'Courier New', monospace" }
           ],
           "default": "'EasyMono', monospace"
+        },
+        {
+          "key": "preferences.lineNumbers.relative",
+          "title": "Relative Line Numbers",
+          "description": "Show line numbers relative to the active line in text and CSV views.",
+          "type": "boolean",
+          "default": false
         }
       ]
     },
@@ -294,6 +301,118 @@
           "description": "Highlight values by inferred type in source view.",
           "type": "boolean",
           "default": false
+        }
+      ]
+    },
+    {
+      "id": "keybindings",
+      "title": "Keybindings",
+      "description": "Keyboard navigation mappings for file views.",
+      "settings": [
+        {
+          "key": "preferences.keybindings.csv.motionsEnabled",
+          "title": "Enable Motion Counts",
+          "description": "Allow numeric prefixes like 10j to repeat movement.",
+          "type": "boolean",
+          "default": true
+        },
+        {
+          "key": "preferences.keybindings.csv.jump.mod",
+          "title": "CSV Jump Modifier",
+          "description": "Modifier to jump to the edge with movement keys.",
+          "type": "enum",
+          "options": [
+            { "label": "None", "value": "none" },
+            { "label": "Ctrl", "value": "ctrl" },
+            { "label": "Alt", "value": "alt" },
+            { "label": "Shift", "value": "shift" },
+            { "label": "Meta", "value": "meta" }
+          ],
+          "default": "ctrl"
+        },
+        {
+          "key": "preferences.keybindings.csv.tab.key",
+          "title": "CSV Tab Key",
+          "description": "Key for moving to the next cell.",
+          "type": "text",
+          "default": "Tab"
+        },
+        {
+          "key": "preferences.keybindings.csv.tab.rowEndMod",
+          "title": "CSV Tab Row-End Modifier",
+          "description": "Modifier to jump to row edge with the tab key.",
+          "type": "enum",
+          "options": [
+            { "label": "None", "value": "none" },
+            { "label": "Ctrl", "value": "ctrl" },
+            { "label": "Alt", "value": "alt" },
+            { "label": "Shift", "value": "shift" },
+            { "label": "Meta", "value": "meta" }
+          ],
+          "default": "ctrl"
+        },
+        {
+          "key": "preferences.keybindings.csv.up.key",
+          "title": "CSV Move Up Key",
+          "description": "Key for moving up in CSV tables.",
+          "type": "text",
+          "default": "ArrowUp"
+        },
+        {
+          "key": "preferences.keybindings.csv.down.key",
+          "title": "CSV Move Down Key",
+          "description": "Key for moving down in CSV tables.",
+          "type": "text",
+          "default": "ArrowDown"
+        },
+        {
+          "key": "preferences.keybindings.csv.left.key",
+          "title": "CSV Move Left Key",
+          "description": "Key for moving left in CSV tables.",
+          "type": "text",
+          "default": "ArrowLeft"
+        },
+        {
+          "key": "preferences.keybindings.csv.right.key",
+          "title": "CSV Move Right Key",
+          "description": "Key for moving right in CSV tables.",
+          "type": "text",
+          "default": "ArrowRight"
+        },
+        {
+          "key": "preferences.keybindings.csv.edit",
+          "title": "CSV Edit Cell",
+          "description": "Shortcut to edit the selected cell.",
+          "type": "text",
+          "default": "Enter"
+        },
+        {
+          "key": "preferences.keybindings.csv.commit",
+          "title": "CSV Commit Edit",
+          "description": "Shortcut to commit edits while editing a cell.",
+          "type": "text",
+          "default": "Enter"
+        },
+        {
+          "key": "preferences.keybindings.csv.leave",
+          "title": "CSV Leave Cell",
+          "description": "Shortcut to exit cell editing without saving.",
+          "type": "text",
+          "default": "Escape"
+        },
+        {
+          "key": "preferences.keybindings.csv.copy",
+          "title": "CSV Copy Cell",
+          "description": "Shortcut to copy the selected cell.",
+          "type": "text",
+          "default": "Ctrl+C"
+        },
+        {
+          "key": "preferences.keybindings.csv.paste",
+          "title": "CSV Paste Cell",
+          "description": "Shortcut to paste into the selected cell.",
+          "type": "text",
+          "default": "Ctrl+V"
         }
       ]
     }

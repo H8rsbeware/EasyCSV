@@ -10,6 +10,25 @@
             "csv": "'EasyMono', monospace",
             "csvEdit": "'EasyMono', monospace"
         },
+        "lineNumbers": {
+            "relative": false
+        },
+        "keybindings": {
+            "csv": {
+                "motionsEnabled": true,
+                "jump": { "mod": "ctrl" },
+                "tab": { "key": "Tab", "rowEndMod": "ctrl" },
+                "up": { "key": "ArrowUp" },
+                "down": { "key": "ArrowDown" },
+                "left": { "key": "ArrowLeft" },
+                "right": { "key": "ArrowRight" },
+                "edit": "Enter",
+                "leave": "Escape",
+                "copy": "Ctrl+C",
+                "paste": "Ctrl+V",
+                "commit": "Enter"
+            }
+        },
         "csv": {
             "defaultMode": "table",
             "maxRows": 1000,

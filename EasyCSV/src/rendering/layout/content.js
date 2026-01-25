@@ -27,6 +27,8 @@ class ContentView {
 			},
 		});
 		this.csvSettings = null;
+		this.userSettings = null;
+		this.menuShortcuts = null;
 		this.settingsSchema = null;
 		this.settingsState = null;
 		this.settingsTheme = null;
@@ -239,6 +241,93 @@ class ContentView {
 
 		const ext = this.getExtension(filePath);
 		const text = result.text ?? '';
+		const settingsState = await this.getUserSettings();
+		const relativeLineNumbers =
+			this.getSettingValue(
+				settingsState,
+				'preferences.lineNumbers.relative'
+			) === true;
+		const keybindingCsv = {
+			motionsEnabled:
+				this.getSettingValue(
+					settingsState,
+					'preferences.keybindings.csv.motionsEnabled'
+				) !== false,
+			jump: {
+				mod:
+					this.getSettingValue(
+						settingsState,
+						'preferences.keybindings.csv.jump.mod'
+					) || 'ctrl',
+			},
+			tab: {
+				key:
+					this.getSettingValue(
+						settingsState,
+						'preferences.keybindings.csv.tab.key'
+					) || 'Tab',
+				rowEndMod:
+					this.getSettingValue(
+						settingsState,
+						'preferences.keybindings.csv.tab.rowEndMod'
+					) || 'ctrl',
+			},
+			up: {
+				key:
+					this.getSettingValue(
+						settingsState,
+						'preferences.keybindings.csv.up.key'
+					) || 'ArrowUp',
+			},
+			down: {
+				key:
+					this.getSettingValue(
+						settingsState,
+						'preferences.keybindings.csv.down.key'
+					) || 'ArrowDown',
+			},
+			left: {
+				key:
+					this.getSettingValue(
+						settingsState,
+						'preferences.keybindings.csv.left.key'
+					) || 'ArrowLeft',
+			},
+			right: {
+				key:
+					this.getSettingValue(
+						settingsState,
+						'preferences.keybindings.csv.right.key'
+					) || 'ArrowRight',
+			},
+			actions: {
+				edit:
+					this.getSettingValue(
+						settingsState,
+						'preferences.keybindings.csv.edit'
+					) || 'Enter',
+				commit:
+					this.getSettingValue(
+						settingsState,
+						'preferences.keybindings.csv.commit'
+					) || 'Enter',
+				leave:
+					this.getSettingValue(
+						settingsState,
+						'preferences.keybindings.csv.leave'
+					) || 'Escape',
+				copy:
+					this.getSettingValue(
+						settingsState,
+						'preferences.keybindings.csv.copy'
+					) || 'Ctrl+C',
+				paste:
+					this.getSettingValue(
+						settingsState,
+						'preferences.keybindings.csv.paste'
+					) || 'Ctrl+V',
+			},
+		};
 
 		if (ext === 'csv' || ext === 'tsv') {
 			const delimiter = ext === 'tsv' ? '\t' : ',';
@@ -251,12 +340,19 @@ class ContentView {
 			}
 			this.textRenderer.clearActiveEditor();
 			this.csvTextRenderer.setDelimiter(delimiter);
+			const csvViewSettings = {
+				...(this.csvSettings || {}),
+				relativeLineNumbers,
+				keybindings: {
+					csv: keybindingCsv,
+				},
+			};
 			this.csvRenderer.render(
 				body,
 				text,
 				delimiter,
 				filePath,
-				this.csvSettings || {},
+				csvViewSettings,
 				{
 					csvTextRenderer: this.csvTextRenderer,
 					fileResult: result,
@@ -281,7 +377,9 @@ class ContentView {
 			return;
 		}
 
-		this.textRenderer.renderEditor(body, filePath, result);
+		this.textRenderer.renderEditor(body, filePath, result, {
+			relativeLineNumbers,
+		});
 	}
 
 	showLoadingOverlay(body) {
@@ -399,10 +497,17 @@ class ContentView {
 			return;
 		}
 
-		const [schema, settings] = await Promise.all([
-			window.userApi.getSettingsSchema(),
-			window.userApi.getSettings(),
-		]);
+		const [schema, settings, menuBlueprint, menuShortcuts] =
+			await Promise.all([
+				window.userApi.getSettingsSchema(),
+				window.userApi.getSettings(),
+				window?.menuApi?.getBlueprint
+					? window.menuApi.getBlueprint()
+					: Promise.resolve(null),
+				window?.menuApi?.getShortcuts
+					? window.menuApi.getShortcuts()
+					: Promise.resolve(null),
+			]);
 
 		const themeValue = window?.theme?.get
 			? await window.theme.get()
@@ -410,8 +515,13 @@ class ContentView {
 
 		if (token !== this.settingsToken) return;
 
-		this.settingsSchema = schema || { sections: [] };
+		this.menuShortcuts = menuShortcuts || {};
+		this.settingsSchema = this.mergeSettingsSchema(
+			schema || { sections: [] },
+			menuBlueprint
+		);
 		this.settingsState = settings || {};
+		this.userSettings = this.settingsState;
 		this.settingsTheme = themeValue;
 		applyFontSettings(this.settingsState);
 
@@ -443,7 +553,6 @@ class ContentView {
 		const fontMode =
 			this.getSettingValue(this.settingsState, 'preferences.fonts.mode') ||
 			'simple';
-
 		for (const section of this.settingsSchema.sections || []) {
 			const items = (section.settings || []).filter((setting) => {
 				if (!this.matchesSettingsQuery(setting, section, normalized)) {
@@ -649,10 +758,69 @@ class ContentView {
 
 		input.addEventListener('change', commit);
 		input.addEventListener('blur', commit);
+		const isShortcutCapture =
+			this.isMenuShortcutSetting(setting) ||
+			this.isCsvActionKeybindingSetting(setting);
+		if (isShortcutCapture || this.isKeybindingKeySetting(setting)) {
+			input.addEventListener('keydown', (event) => {
+				event.preventDefault();
+				event.stopPropagation();
+				if (event.key === 'Escape') {
+					input.blur();
+					return;
+				}
+				if (event.key === 'Backspace' || event.key === 'Delete') {
+					input.value = '';
+					onSave?.('');
+					return;
+				}
+				const rawKey = event.key === ' ' ? 'Space' : event.key;
+				if (
+					rawKey === 'Shift' ||
+					rawKey === 'Control' ||
+					rawKey === 'Alt' ||
+					rawKey === 'Meta'
+				) {
+					return;
+				}
+
+				if (isShortcutCapture) {
+					const tokens = [];
+					if (event.ctrlKey) tokens.push('Ctrl');
+					if (event.altKey) tokens.push('Alt');
+					if (event.shiftKey) tokens.push('Shift');
+					if (event.metaKey) tokens.push('Meta');
+					const key =
+						rawKey.length === 1 ? rawKey.toUpperCase() : rawKey;
+					tokens.push(key);
+					const combo = tokens.join('+');
+					input.value = combo;
+					onSave?.(combo);
+					return;
+				}
+
+				if (event.ctrlKey || event.altKey || event.shiftKey || event.metaKey) {
+					return;
+				}
+
+				const key = rawKey;
+				input.value = key;
+				onSave?.(key);
+			});
+		}
 		return input;
 	}
 
 	async saveSettingValue(setting, value) {
+		if (this.isMenuShortcutSetting(setting)) {
+			if (!window?.menuApi?.setShortcut) return false;
+			const command = this.getMenuShortcutCommand(setting.key);
+			const res = await window.menuApi.setShortcut(command, value);
+			if (!res?.ok) return false;
+			if (!this.menuShortcuts) this.menuShortcuts = {};
+			this.menuShortcuts[command] = res.value || '';
+			return true;
+		}
 		if (setting.key === 'preferences.theme' && window?.theme?.set) {
 			document.documentElement.dataset.theme = value;
 			try {
@@ -671,6 +839,9 @@ class ContentView {
 		if (!res?.ok) return false;
 
 		this.applySettingValue(this.settingsState, setting.key, res.value);
+		if (this.userSettings) {
+			this.applySettingValue(this.userSettings, setting.key, res.value);
+		}
 		if (setting.key?.startsWith('preferences.fonts')) {
 			applyFontSettings(this.settingsState);
 			if (setting.key === 'preferences.fonts.mode') {
@@ -684,10 +855,21 @@ class ContentView {
 	}
 
 	getSettingsDisplayValue(setting) {
+		if (this.isMenuShortcutSetting(setting)) {
+			const value = this.getMenuShortcutValue(setting.key);
+			if (value) return value;
+			if (typeof setting.default !== 'undefined') return setting.default;
+			return '';
+		}
 		if (setting.key === 'preferences.theme') {
 			return this.settingsTheme ?? 'light';
 		}
-		return this.getSettingValue(this.settingsState, setting.key);
+		const value = this.getSettingValue(this.settingsState, setting.key);
+		if (value !== '' && typeof value !== 'undefined') return value;
+		if (this.isCsvKeybindingSetting(setting)) {
+			if (typeof setting.default !== 'undefined') return setting.default;
+		}
+		return value;
 	}
 
 	getSettingValue(state, keyPath) {
@@ -738,6 +920,79 @@ class ContentView {
 			'preferences.fonts.interface',
 			'preferences.fonts.editor',
 		].includes(key);
+	}
+
+	isMenuShortcutSetting(setting) {
+		const key = setting?.key || '';
+		return key.startsWith('menu.shortcuts.');
+	}
+
+	isKeybindingKeySetting(setting) {
+		const key = setting?.key || '';
+		return key.startsWith('preferences.keybindings.csv.') && key.endsWith('.key');
+	}
+
+	isCsvActionKeybindingSetting(setting) {
+		const key = setting?.key || '';
+		return (
+			key === 'preferences.keybindings.csv.edit' ||
+			key === 'preferences.keybindings.csv.commit' ||
+			key === 'preferences.keybindings.csv.leave' ||
+			key === 'preferences.keybindings.csv.copy' ||
+			key === 'preferences.keybindings.csv.paste'
+		);
+	}
+
+	isCsvKeybindingSetting(setting) {
+		const key = setting?.key || '';
+		return key.startsWith('preferences.keybindings.csv.');
+	}
+
+	getMenuShortcutCommand(key) {
+		if (!key) return '';
+		return key.replace('menu.shortcuts.', '');
+	}
+
+	getMenuShortcutValue(key) {
+		const command = this.getMenuShortcutCommand(key);
+		if (!command) return '';
+		return this.menuShortcuts?.[command] || '';
+	}
+
+	mergeSettingsSchema(schema, menuBlueprint) {
+		if (!menuBlueprint || typeof menuBlueprint !== 'object') return schema;
+		const baseSections = Array.isArray(schema.sections)
+			? schema.sections.slice()
+			: [];
+		const menuSection = this.buildMenuShortcutsSection(menuBlueprint);
+		if (menuSection.settings.length === 0) return schema;
+		return { ...schema, sections: [...baseSections, menuSection] };
+	}
+
+	buildMenuShortcutsSection(blueprint) {
+		const settings = [];
+		Object.entries(blueprint).forEach(([groupId, group]) => {
+			const groupLabel = group?.label || groupId;
+			(group?.items || []).forEach((item) => {
+				if (!item || item.type === 'separator') return;
+				if (!item.command) return;
+				const label = item.label || item.command;
+				settings.push({
+					key: `menu.shortcuts.${item.command}`,
+					title: `${groupLabel} \u2022 ${label}`,
+					description: `Shortcut for ${groupLabel} > ${label}`,
+					type: 'text',
+					default: item.shortcut || '',
+				});
+			});
+		});
+
+		return {
+			id: 'menu-shortcuts',
+			title: 'Menu Shortcuts',
+			description: 'Keyboard shortcuts for menu commands.',
+			settings,
+		};
 	}
 
 	buildSettingsHint(setting) {
@@ -799,6 +1054,17 @@ class ContentView {
 
 		this.inflight.set(filePath, promise);
 		return await promise;
+	}
+
+	async getUserSettings() {
+		if (this.userSettings) return this.userSettings;
+		if (!window?.userApi?.getSettings) return {};
+		try {
+			this.userSettings = await window.userApi.getSettings();
+		} catch (err) {
+			this.userSettings = {};
+		}
+		return this.userSettings;
 	}
 
 }

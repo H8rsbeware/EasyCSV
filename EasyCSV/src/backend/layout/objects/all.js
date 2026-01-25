@@ -1,9 +1,9 @@
-import { LayoutBlueprint } from './LayoutBlueprint.js';
-import { WorkspaceBlueprint } from './WorkspaceBlueprint.js';
-import { SidebarBlueprint, SidebarModes } from './SidebarBlueprint.js';
-import { TabBlueprint, TabKinds } from './TabBlueprint.js';
+const { LayoutBlueprint } = require('./LayoutBlueprint');
+const { WorkspaceBlueprint } = require('./WorkspaceBlueprint');
+const { SidebarBlueprint, SidebarModes } = require('./SidebarBlueprint');
+const { TabBlueprint, TabKinds } = require('./TabBlueprint');
 
-export {
+module.exports = {
 	LayoutBlueprint,
 	WorkspaceBlueprint,
 	SidebarBlueprint,

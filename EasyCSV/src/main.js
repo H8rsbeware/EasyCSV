@@ -167,6 +167,92 @@ ipcMain.handle('menu:getBlueprint', () => {
 	return menuState.menu_state;
 });
 
+function loadMenuShortcuts() {
+	if (!settings) return {};
+	const defaultsPath = settings.UserMenuShortcutsDefaultPath();
+	const userPath = settings.UserMenuShortcutsPath();
+
+	let defaults = {};
+	let user = {};
+
+	try {
+		if (fs.existsSync(defaultsPath)) {
+			defaults = JSON.parse(fs.readFileSync(defaultsPath, 'utf8'));
+		}
+	} catch (err) {
+		defaults = {};
+	}
+
+	try {
+		if (fs.existsSync(userPath)) {
+			user = JSON.parse(fs.readFileSync(userPath, 'utf8'));
+		}
+	} catch (err) {
+		user = {};
+	}
+
+	return { ...defaults, ...user };
+}
+
+function loadUserShortcuts() {
+	if (!settings) return {};
+	const userPath = settings.UserMenuShortcutsPath();
+	try {
+		if (fs.existsSync(userPath)) {
+			return JSON.parse(fs.readFileSync(userPath, 'utf8'));
+		}
+	} catch (err) {
+		return {};
+	}
+	return {};
+}
+
+function saveUserShortcuts(next) {
+	if (!settings) return false;
+	const userPath = settings.UserMenuShortcutsPath();
+	try {
+		fs.writeFileSync(userPath, JSON.stringify(next, null, 2), 'utf8');
+		return true;
+	} catch (err) {
+		return false;
+	}
+}
+
+ipcMain.handle('menu:getShortcuts', () => {
+	return loadMenuShortcuts();
+});
+
+ipcMain.handle('menu:setShortcut', (_event, payload = {}) => {
+	const command = payload?.command;
+	if (typeof command !== 'string' || !command.trim()) {
+		return { ok: false, reason: 'Invalid command.' };
+	}
+
+	const shortcut = typeof payload?.shortcut === 'string' ? payload.shortcut : '';
+	const trimmed = shortcut.trim();
+	const userShortcuts = loadUserShortcuts();
+
+	if (!trimmed) {
+		delete userShortcuts[command];
+	} else {
+		userShortcuts[command] = trimmed;
+	}
+
+	const saved = saveUserShortcuts(userShortcuts);
+	if (!saved) return { ok: false, reason: 'Failed to save shortcut.' };
+
+	if (menuState?.InitMenuState) {
+		try {
+			menuState.menu_state = menuState.InitMenuState();
+		} catch (err) {
+			// Ignore rebuild failures; file is still saved.
+		}
+	}
+
+	const resolved = loadMenuShortcuts();
+	return { ok: true, value: resolved[command] || '' };
+});
+
 ipcMain.handle('layout:get', () => {
 	return layoutState.get().toJSON();
 });
